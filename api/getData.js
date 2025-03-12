@@ -1,26 +1,41 @@
-// api/getData.js
-const mysql = require('mysql2');
+import React, { useEffect, useState } from 'react';
 
-module.exports = async (req, res) => {
-  // MySQL connection settings (stored as environment variables for security)
-  const connection = mysql.createConnection({
-    host: process.env.DBHOST,
-    user: process.env.DBUSER,
-    password: process.env.DBPASS,
-    database: process.env.DBNAME,
-  });
+const TestAPI = () => {
+  const [data, setData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-  // Query the database
-  connection.query('SELECT * FROM states', (err, results) => {
-    if (err) {
-      console.error('Database query error:', err);
-      return res.status(500).json({ error: 'Error querying database' });
-    }
+  useEffect(() => {
+    // Fetch data from your API
+    fetch('https://vercel-api-powebapp.vercel.app/api/getData')  // Replace with actual endpoint
+      .then(response => {
+        if (!response.ok) {
+          throw new Error('Network response was not ok');
+        }
+        return response.json();
+      })
+      .then(data => {
+        setData(data);
+        setLoading(false);
+      })
+      .catch(error => {
+        console.error('Error fetching data:', error);
+        setLoading(false);
+      });
+  }, []);
 
-    // Send the results as a JSON response
-    res.status(200).json(results);
-  });
-
-  // Close the connection
-  connection.end();
+  return (
+    <div>
+      <h1>Test API Page</h1>
+      <p>Data from the API:</p>
+      {loading ? (
+        <p>Loading...</p>
+      ) : data ? (
+        <pre>{JSON.stringify(data, null, 2)}</pre>
+      ) : (
+        <p>No data available</p>
+      )}
+    </div>
+  );
 };
+
+export default TestAPI;
