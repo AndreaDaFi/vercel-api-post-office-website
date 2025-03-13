@@ -1,41 +1,33 @@
-import React, { useEffect, useState } from 'react';
+// api/getData.js
+const mysql = require('mysql2');
+const fs = require('fs'); // To read the certificate file
 
-const TestAPI = () => {
-  const [data, setData] = useState(null);
-  const [loading, setLoading] = useState(true);
+module.exports = async (req, res) => {
+  // Path to your SSL certificate file, adjust if needed
+  const sslCA = fs.readFileSync('./DigiCertGlobalRootCA.crt'); // Ensure this is the correct path
 
-  useEffect(() => {
-    // Fetch data from your API
-    fetch('https://vercel-api-powebapp.vercel.app/api/getData')  // Replace with actual endpoint
-      .then(response => {
-        if (!response.ok) {
-          throw new Error('Network response was not ok');
-        }
-        return response.json();
-      })
-      .then(data => {
-        setData(data);
-        setLoading(false);
-      })
-      .catch(error => {
-        console.error('Error fetching data:', error);
-        setLoading(false);
-      });
-  }, []);
+  // MySQL connection settings with SSL
+  const pool = mysql.createPool({
+    host: process.env.DBHOST,
+    user: process.env.DBUSER,
+    password: process.env.DBPASS,
+    database: process.env.DBNAME,
+    ssl: {
+      ca: sslCA, // Provide the certificate
+    },
+    waitForConnections: true,
+    connectionLimit: 10,
+    queueLimit: 0,
+  });
 
-  return (
-    <div>
-      <h1>Test API Page</h1>
-      <p>Data from the API:</p>
-      {loading ? (
-        <p>Loading...</p>
-      ) : data ? (
-        <pre>{JSON.stringify(data, null, 2)}</pre>
-      ) : (
-        <p>No data available</p>
-      )}
-    </div>
-  );
+  // Query the database
+  pool.query('SELECT * FROM states', (err, results) => {
+    if (err) {
+      console.error('Database query error:', err);
+      return res.status(500).json({ error: 'Error querying database' });
+    }
+
+    // Send the results as a JSON response
+    res.status(200).json(results);
+  });
 };
-
-export default TestAPI;
