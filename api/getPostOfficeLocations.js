@@ -24,12 +24,11 @@ export default async function handler(req, res) {
     console.log("✅ Database connected!");
 
     const [rows] = await connection.execute(
-        'SELECT po.po_id, ad.street, s.state_name, c.city_name ' +
-        'FROM post_office AS po ' +
-        'JOIN address AS ad ON po.po_address_id = ad.address_id ' +
-        'JOIN state AS s ON ad.state_id = s.state_id ' +
-        'JOIN city AS c ON ad.city_id = c.city_id;'
-      );
+      `SELECT po.po_id, ad.street, s.state_name, ad.city_name 
+       FROM post_office AS po
+       JOIN address AS ad ON po.po_address_id = ad.address_id
+       JOIN state AS s ON ad.state_id = s.state_id`
+    );
     await connection.end();
 
     console.log("✅ Query executed successfully!", rows);

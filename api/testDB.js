@@ -23,7 +23,7 @@ export default async function handler(req, res) {
 
     console.log("✅ Database connected!");
 
-    const [rows] = await connection.execute('SELECT * FROM city');
+    const [rows] = await connection.execute('SELECT state_name FROM state');
     await connection.end();
 
     console.log("✅ Query executed successfully!", rows);
