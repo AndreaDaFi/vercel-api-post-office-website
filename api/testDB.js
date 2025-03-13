@@ -1,78 +1,29 @@
-const http = require('http');
-const mysql = require('mysql2');
-const dotenv = require('dotenv');
+import mysql from 'mysql2/promise';
 
-// Load environment variables from the .env file
-dotenv.config();
+export default async function handler(req, res) {
+  try {
+    console.log("⏳ Connecting to database...");
 
-// Create an SSL certificate from the environment variable (base64 encoded)
-const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
-
-// Log the environment variables for debugging (be cautious of logging sensitive data in production)
-console.log("DBHOST:", process.env.DBHOST);
-console.log("DBUSER:", process.env.DBUSER);
-
-// Create a connection pool to the MySQL database
-const pool = mysql.createPool({
-    host: process.env.DBHOST,
-    user: process.env.DBUSER,
-    password: process.env.DBPASS,
-    database: process.env.DBNAME,
-    ssl: {
-      ca: sslCA, // Provide the certificate for SSL connection
-    }
-});
-
-// Create an HTTP server to handle requests
-const server = http.createServer((req, res) => {
-  // Log the method and URL for debugging purposes
-  console.log(`Request Method: ${req.method}, Request URL: ${req.url}`);
-
-  // Set the response header to return JSON data
-  res.setHeader('Content-Type', 'application/json');
-
-  // Handle the GET request to fetch state data
-  if (req.method === 'GET' && req.url === '/api/state') {
-    console.log("Querying database for state data...");
-    // Query the database to get all state data
-    pool.query('SELECT * FROM state', (err, results) => {
-      if (err) {
-        console.error('Database query error:', err);  // Log the error message
-        res.statusCode = 500;
-        res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
-        return;
-      }
-
-      // Return the results as a JSON response
-      res.statusCode = 200;
-      res.end(JSON.stringify(results));
+    const connection = await mysql.createConnection({
+      host: process.env.DBHOST, // FIXED: Match .env variable names
+      user: process.env.DBUSER,
+      password: process.env.DBPASS,
+      database: process.env.DBNAME,
+      ssl: process.env.DB_SSL_CA 
+        ? { ca: Buffer.from(process.env.DB_SSL_CA, 'base64') }
+        : false, // FIXED: Only apply SSL if it's provided
+      connectTimeout: 5000, // Reduce connection timeout
     });
-  }
-  // Handle the /api/testDB route
-  else if (req.method === 'GET' && req.url === '/api/testDB') {
-    console.log("Testing database connection...");
-    // Perform a simple query to check the database connection
-    pool.query('SELECT NOW() AS now', (err, results) => {
-      if (err) {
-        console.error('Database query error:', err);  // Log the error message
-        res.statusCode = 500;
-        res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
-        return;
-      }
 
-      // Return the current database time as a JSON response
-      res.statusCode = 200;
-      res.end(JSON.stringify({ message: 'Database connection successful', time: results[0].now }));
-    });
-  }
-  else {
-    // Handle invalid routes
-    res.statusCode = 404;
-    res.end(JSON.stringify({ error: 'Not Found' }));
-  }
-});
+    console.log("✅ Database connected!");
 
-// Start the server on port 3000
-server.listen(3000, () => {
-  console.log('Server is running on http://localhost:3000');
-});
+    const [rows] = await connection.execute('SELECT * FROM state LIMIT 10'); // FIXED: Add LIMIT to prevent slow query
+    await connection.end();
+
+    console.log("✅ Query executed successfully!", rows);
+    res.status(200).json({ success: true, data: rows });
+  } catch (error) {
+    console.error("❌ API Error:", error.message);
+    res.status(500).json({ success: false, error: error.message });
+  }
+}
