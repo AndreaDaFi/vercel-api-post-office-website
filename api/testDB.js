@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
     console.log("✅ Database connection successful!");
     
     // Query to check the database connection
-    const [rows] = await connection.execute('SELECT NOW() AS now;');
+    const [rows] = await connection.execute('SELECT * FROM state;');
     console.log("🕒 Database Time:", rows[0].now);
 
     // Respond with success
