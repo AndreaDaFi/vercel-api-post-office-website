@@ -1,23 +1,19 @@
 // api/getData.js
-const mysql = require('mysql2');
-const fs = require('fs'); // To read the certificate file
+const mysql = require('mysql2'); // Use CommonJS `require()` instead of `import`
 
 module.exports = async (req, res) => {
   // Path to your SSL certificate file, adjust if needed
   const sslCA = fs.readFileSync('./DigiCertGlobalRootCA.crt'); // Ensure this is the correct path
 
-  // MySQL connection settings with SSL
+  // MySQL connection settings (stored as environment variables for security)
   const pool = mysql.createPool({
     host: process.env.DBHOST,
     user: process.env.DBUSER,
     password: process.env.DBPASS,
     database: process.env.DBNAME,
-    ssl: {
-      ca: sslCA, // Provide the certificate
-    },
     waitForConnections: true,
     connectionLimit: 10,
-    queueLimit: 0,
+    queueLimit: 0
   });
 
   // Query the database
