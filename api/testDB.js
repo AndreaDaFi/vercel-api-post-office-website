@@ -23,7 +23,7 @@ module.exports = async (req, res) => {
     console.log("✅ Database connection successful!");
 
     // Query to check the database connection
-    const result = await connection.execute('SELECT * FROM state;');
+    const result = await connection.execute('SELECT * FROM state');
     
     // Log the entire result object to understand its structure
     console.log("Query Result:", result);
