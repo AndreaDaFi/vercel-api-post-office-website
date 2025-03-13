@@ -8,6 +8,10 @@ dotenv.config();
 // Create an SSL certificate from the environment variable (base64 encoded)
 const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
 
+// Log the environment variables for debugging (be cautious of logging sensitive data in production)
+console.log("DBHOST:", process.env.DBHOST);
+console.log("DBUSER:", process.env.DBUSER);
+
 // Create a connection pool to the MySQL database
 const pool = mysql.createPool({
     host: process.env.DBHOST,
@@ -29,15 +33,16 @@ const server = http.createServer((req, res) => {
 
   // Handle the GET request to fetch package data
   if (req.method === 'GET' && req.url === '/api/state') {
+    console.log("Querying database for state data...");
     // Query the database to get all state data
     pool.query('SELECT * FROM state', (err, results) => {
       if (err) {
-        console.error('Database query error:', JSON.stringify(err));  // Log the full error to the console
+        console.error('Database query error:', err);  // Log the error message
         res.statusCode = 500;
         res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
         return;
       }
-  
+ 
       // Return the results as a JSON response
       res.statusCode = 200;
       res.end(JSON.stringify(results));
