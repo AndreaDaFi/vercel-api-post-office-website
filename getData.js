@@ -20,12 +20,12 @@ module.exports = async (req, res) => {
   });
 
   // Query the database
-  pool.query('SELECT * FROM states', (err, results) => {
+  pool.query("SELECT * FROM states WHERE state_name = 'Texas';", (err, results) => {
     if (err) {
       console.error('Database query error:', err);
       return res.status(500).json({ error: 'Error querying database' });
     }
-
+  
     // Send the results as a JSON response
     res.status(200).json(results);
   });
