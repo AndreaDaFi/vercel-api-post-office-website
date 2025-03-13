@@ -1,10 +1,9 @@
 // api/getData.js
 const mysql = require('mysql2');
-const fs = require('fs'); // Add fs to read certificate
 
 module.exports = async (req, res) => {
   // Path to your SSL certificate file (ensure it is correct)
-  const sslCA = fs.readFileSync('./DigiCertGlobalRootCA.crt.pem'); // Ensure this is the correct path to the certificate
+  const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64'); // Ensure this is the correct path to the certificate
 
   // MySQL connection settings (stored as environment variables for security)
   const pool = mysql.createPool({
