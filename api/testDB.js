@@ -8,17 +8,19 @@ module.exports = async (req, res) => {
 
     // Create the MySQL connection
     const connection = await mysql.createConnection({
-      host: process.env.DBHOST,
-      user: process.env.DBUSER,
-      password: process.env.DBPASS,
-      database: process.env.DBNAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      ssl: {
-        ca: sslCA, // Provide the certificate for SSL connection
-      }
-    });
+        host: process.env.DBHOST,
+        user: process.env.DBUSER,
+        password: process.env.DBPASS,
+        database: process.env.DBNAME,
+        waitForConnections: true,
+        connectionLimit: 10,
+        queueLimit: 0,
+        ssl: {
+          ca: sslCA, // Provide the certificate for SSL connection
+        },
+        flags: ['SHOW_WARNINGS'] // This enables error/notice logging
+      });
+      
 
     console.log("✅ Database connection successful!");
     console.log("DBHOST:", process.env.DBHOST);
