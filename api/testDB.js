@@ -24,7 +24,7 @@ module.exports = async (req, res) => {
     
     // Query to check the database connection
     const [rows, fields] = await connection.execute('SELECT * FROM state;');
-    console.log("🕒 Database Time:", rows[0].now);
+    console.log("🕒 Database Time:", rows[0].now); // Assuming 'now' is a column in your state table
 
     // Respond with success
     res.status(200).json({
