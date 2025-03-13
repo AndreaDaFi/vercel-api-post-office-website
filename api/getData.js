@@ -10,13 +10,13 @@ const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
 
 // Create a connection pool to the MySQL database
 const pool = mysql.createPool({
-    host: process.env.MYSQL_HOST,
-    user: process.env.MYSQL_USER,
-    password: process.env.MYSQL_PASSWORD,
-    database: process.env.MYSQL_DATABASE,
-    ssl: {
-      ca: sslCA, // Provide the certificate for SSL connection
-    }
+  host: process.env.MYSQL_HOST,
+  user: process.env.MYSQL_USER,
+  password: process.env.MYSQL_PASSWORD,
+  database: process.env.MYSQL_DATABASE,
+  ssl: {
+    ca: sslCA, // Provide the certificate for SSL connection
+  }
 });
 
 // Create an HTTP server to handle requests
