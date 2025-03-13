@@ -23,14 +23,24 @@ module.exports = async (req, res) => {
     console.log("✅ Database connection successful!");
     
     // Query to check the database connection
-    const [rows, fields] = await connection.execute('SELECT * FROM state');
-    console.log("🕒 Database Time:", rows[0].now); // Assuming 'now' is a column in your state table
+    const result = await connection.execute('SELECT * FROM state;');
+    
+    console.log("Query Result:", result);
 
-    // Respond with success
-    res.status(200).json({
-      message: "Database connection successful",
-      time: rows[0].now
-    });
+    // Check if the result is iterable (array of rows)
+    if (Array.isArray(result[0])) {
+      console.log("🕒 Database Time:", result[0][0].now); // Assuming 'now' is a column in your state table
+      res.status(200).json({
+        message: "Database connection successful",
+        time: result[0][0].now
+      });
+    } else {
+      console.error("❌ Unexpected result format:", result);
+      res.status(500).json({
+        error: "Unexpected result format",
+        message: "The query did not return an array of rows."
+      });
+    }
 
     // Close the connection
     await connection.end();
