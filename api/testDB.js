@@ -1,12 +1,13 @@
-// api/testDB.js
-import mysql from 'mysql2/promise';
-
 export default async function handler(req, res) {
   // Set custom headers to avoid content-type sniffing
   res.setHeader('x-content-type-options', 'nosniff');
 
+  // Add CORS headers to allow requests from your frontend
+  res.setHeader('Access-Control-Allow-Origin', '*');  // Or specify your frontend URL here for security
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
+
   try {
-    // Your existing database logic here
     console.log("⏳ Connecting to database...");
     const connection = await mysql.createConnection({
       host: process.env.DBHOST,
