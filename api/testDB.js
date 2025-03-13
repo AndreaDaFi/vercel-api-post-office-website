@@ -22,35 +22,31 @@ module.exports = async (req, res) => {
 
     console.log("✅ Database connection successful!");
 
-    // Query to check the database connection
-    const result = await connection.execute('SELECT * FROM state');
-    
-    // Log the entire result object to understand its structure
-    console.log("Query Result:", result);
+    // SQL query to insert a new state
+    const insertQuery = `
+      INSERT INTO state (state_name, state_id, tax)
+      VALUES (?, ?, ?)
+    `;
 
-    // Check if the result is iterable (array of rows)
-    if (Array.isArray(result[0])) {
-      console.log("🕒 Database Time:", result[0][0].now); // Assuming 'now' is a column in your state table
-      res.status(200).json({
-        message: "Database connection successful",
-        time: result[0][0].now
-      });
-    } else {
-      console.error("❌ Unexpected result format:", result);
-      res.status(500).json({
-        error: "Unexpected result format",
-        message: "The query did not return an array of rows."
-      });
-    }
+    // Execute the insert query with the values
+    const [result] = await connection.execute(insertQuery, ['Alabama', 'al', 1.04]);
+
+    console.log("✅ State inserted successfully:", result);
+
+    // Return success response
+    res.status(200).json({
+      message: "State inserted successfully",
+      insertedId: result.insertId // Return the ID of the inserted row (if applicable)
+    });
 
     // Close the connection
     await connection.end();
   } catch (error) {
-    console.error("❌ Database connection failed:", error.message);
+    console.error("❌ Database operation failed:", error.message);
     
     // Send error response
     res.status(500).json({
-      error: "Database connection failed",
+      error: "Database operation failed",
       message: error.message
     });
   }
