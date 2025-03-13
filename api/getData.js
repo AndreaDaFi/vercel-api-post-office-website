@@ -1,10 +1,19 @@
 const mysql = require('mysql2');
+const dotenv = require('dotenv');
+
+// Load environment variables
+dotenv.config();
 
 module.exports = async (req, res) => {
   try {
-    // Path to your SSL certificate file (ensure it is correct)
-    const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64'); // Ensure this is the correct path to the certificate
+    // Ensure that DB_SSL_CA is defined
+    if (!process.env.DB_SSL_CA) {
+      return res.status(400).json({ error: 'SSL certificate not found in environment variables' });
+    }
 
+    // Attempt to decode the certificate
+    const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
+    
     // MySQL connection settings (stored as environment variables for security)
     const pool = mysql.createPool({
       host: process.env.DBHOST,
