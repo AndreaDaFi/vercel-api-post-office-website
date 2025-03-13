@@ -1,23 +1,27 @@
+// api/testDB.js
 import mysql from 'mysql2/promise';
 
 export default async function handler(req, res) {
-  try {
-    console.log("⏳ Connecting to database...");
+  // Set custom headers to avoid content-type sniffing
+  res.setHeader('x-content-type-options', 'nosniff');
 
+  try {
+    // Your existing database logic here
+    console.log("⏳ Connecting to database...");
     const connection = await mysql.createConnection({
-      host: process.env.DBHOST, // FIXED: Match .env variable names
+      host: process.env.DBHOST,
       user: process.env.DBUSER,
       password: process.env.DBPASS,
       database: process.env.DBNAME,
       ssl: process.env.DB_SSL_CA 
         ? { ca: Buffer.from(process.env.DB_SSL_CA, 'base64') }
-        : false, // FIXED: Only apply SSL if it's provided
-      connectTimeout: 5000, // Reduce connection timeout
+        : false,
+      connectTimeout: 5000,
     });
 
     console.log("✅ Database connected!");
 
-    const [rows] = await connection.execute('SELECT * FROM state LIMIT 10'); // FIXED: Add LIMIT to prevent slow query
+    const [rows] = await connection.execute('SELECT * FROM state');
     await connection.end();
 
     console.log("✅ Query executed successfully!", rows);
