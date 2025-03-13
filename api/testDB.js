@@ -2,6 +2,7 @@ async function testDB() {
     try {
       console.log("⏳ Connecting to Azure MySQL...");
       const connection = await mysql.createConnection({
+        const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
         host: process.env.DBHOST,
         user: process.env.DBUSER,
         password: process.env.DBPASS,
