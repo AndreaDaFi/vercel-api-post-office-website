@@ -1,45 +1,35 @@
-const mysql = require('mysql2');
 
-module.exports = async (req, res) => {
-  try {
-    // Path to your SSL certificate file (ensure it is correct)
-    const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64'); // Ensure this is the correct path to the certificate
+// Create an HTTP server to handle requests
+const server = http.createServer((req, res) => {
+  // Log the method and URL for debugging purposes
+  console.log(`Request Method: ${req.method}, Request URL: ${req.url}`);
 
-    // MySQL connection settings (stored as environment variables for security)
-    const pool = mysql.createPool({
-      host: process.env.DBHOST,
-      user: process.env.DBUSER,
-      password: process.env.DBPASS,
-      database: process.env.DBNAME,
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-      ssl: {
-        ca: sslCA, // Provide the certificate for SSL connection
-      }
-    });
+  // Set the response header to return JSON data
+  res.setHeader('Content-Type', 'application/json');
 
-    // Test the connection first
-    pool.getConnection((err, connection) => {
+  // Handle the GET request to fetch package data
+  if (req.method === 'GET' && req.url === '/api/state') {
+    // Query the database to get all state data
+    pool.query('SELECT * FROM state', (err, results) => {
       if (err) {
-        console.error('Database connection error:', err);
-        return res.status(500).json({ error: 'Error connecting to database' });
+        console.error('Database query error:', JSON.stringify(err));  // Log the full error to the console
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
+        return;
       }
-      connection.release(); // Release the connection after testing
-
-      // Query the database
-      pool.query('SELECT * FROM states LIMIT 10', (err, results) => {
-        if (err) {
-          console.error('Database query error:', err);
-          return res.status(500).json({ error: 'Error querying database' });
-        }
-
-        // Send the results as a JSON response
-        res.status(200).json(results);
-      });
+  
+    // Return the results as a JSON response
+    res.statusCode = 200;
+    res.end(JSON.stringify(results));
     });
-  } catch (error) {
-    console.error('Server Error:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+  } else {
+    // Handle invalid routes
+    res.statusCode = 404;
+    res.end(JSON.stringify({ error: 'Not Found' }));
   }
-};
+});
+
+// Start the server on port 3000
+server.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
+});
