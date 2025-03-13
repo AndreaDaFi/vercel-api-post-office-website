@@ -31,7 +31,7 @@ const server = http.createServer((req, res) => {
   // Set the response header to return JSON data
   res.setHeader('Content-Type', 'application/json');
 
-  // Handle the GET request to fetch package data
+  // Handle the GET request to fetch state data
   if (req.method === 'GET' && req.url === '/api/state') {
     console.log("Querying database for state data...");
     // Query the database to get all state data
@@ -42,12 +42,30 @@ const server = http.createServer((req, res) => {
         res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
         return;
       }
- 
+
       // Return the results as a JSON response
       res.statusCode = 200;
       res.end(JSON.stringify(results));
     });
-  } else {
+  }
+  // Handle the /api/testDB route
+  else if (req.method === 'GET' && req.url === '/api/testDB') {
+    console.log("Testing database connection...");
+    // Perform a simple query to check the database connection
+    pool.query('SELECT NOW() AS now', (err, results) => {
+      if (err) {
+        console.error('Database query error:', err);  // Log the error message
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
+        return;
+      }
+
+      // Return the current database time as a JSON response
+      res.statusCode = 200;
+      res.end(JSON.stringify({ message: 'Database connection successful', time: results[0].now }));
+    });
+  }
+  else {
     // Handle invalid routes
     res.statusCode = 404;
     res.end(JSON.stringify({ error: 'Not Found' }));
