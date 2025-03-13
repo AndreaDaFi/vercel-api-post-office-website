@@ -1,7 +1,6 @@
 // Import mysql2
 const mysql = require('mysql2'); // Import the MySQL client
-const dotenv = require('dotenv'); // Import the dotenv module
-dotenv.config(); // Load environment variables
+
 module.exports = async (req, res) => {
   try {
     const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
@@ -22,6 +21,10 @@ module.exports = async (req, res) => {
     });
 
     console.log("✅ Database connection successful!");
+    console.log("DBHOST:", process.env.DBHOST);
+    console.log("DBUSER:", process.env.DBUSER);
+    console.log("DBNAME:", process.env.DBNAME);
+    console.log("DBNAME:", process.env.DBPASS);
 
     // SQL query to insert a new state
     const insertQuery = `
