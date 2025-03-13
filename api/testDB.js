@@ -1,81 +1,55 @@
-// Import mysql2
-const mysql = require('mysql2'); // Import the MySQL client
+const http = require('http');
+const mysql = require('mysql2');
+const dotenv = require('dotenv');
 
-module.exports = async (req, res) => {
-  try {
-    const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
-    console.log("⏳ Connecting to Azure MySQL...");
+// Load environment variables from the .env file
+dotenv.config();
 
-    // Create the MySQL connection
-    const connection = await mysql.createConnection({
-        host: process.env.DBHOST,
-        user: process.env.DBUSER,
-        password: process.env.DBPASS,
-        database: process.env.DBNAME,
-        waitForConnections: true,
-        connectionLimit: 10,
-        queueLimit: 0,
-        ssl: {
-          ca: sslCA, // Provide the certificate for SSL connection
-        },
-        flags: ['SHOW_WARNINGS'] // This enables error/notice logging
-      });
-      
+// Create an SSL certificate from the environment variable (base64 encoded)
+const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
 
-    console.log("✅ Database connection successful!");
-    console.log("DBHOST:", process.env.DBHOST);
-    console.log("DBUSER:", process.env.DBUSER);
-    console.log("DBNAME:", process.env.DBNAME);
-    console.log("DBNAME:", process.env.DBPASS);
-
-    // SQL query to insert a new state
-    const insertQuery = `
-        INSERT INTO state (state_name, state_id, tax)
-        VALUES (?, ?, ?)
-    `;
-
-    connection.query(insertQuery, ['Alabama', 'al', 1.04], (err, results) => {
-    if (err) {
-        console.error('Error during insert:', err);
-        return res.status(500).json({ error: 'Insert operation failed', message: err.message });
+// Create a connection pool to the MySQL database
+const pool = mysql.createPool({
+    host: process.env.MYSQL_HOST,
+    user: process.env.MYSQL_USER,
+    password: process.env.MYSQL_PASSWORD,
+    database: process.env.MYSQL_DATABASE,
+    ssl: {
+      ca: sslCA, // Provide the certificate for SSL connection
     }
-    console.log('Insert successful:', results);
-    res.status(200).json({
-        message: "State inserted successfully",
-        insertedId: results.insertId // Should be available if inserted successfully
+});
+
+// Create an HTTP server to handle requests
+const server = http.createServer((req, res) => {
+  // Log the method and URL for debugging purposes
+  console.log(`Request Method: ${req.method}, Request URL: ${req.url}`);
+
+  // Set the response header to return JSON data
+  res.setHeader('Content-Type', 'application/json');
+
+  // Handle the GET request to fetch package data
+  if (req.method === 'GET' && req.url === '/api/state') {
+    // Query the database to get all state data
+    pool.query('SELECT * FROM state', (err, results) => {
+      if (err) {
+        console.error('Database query error:', JSON.stringify(err));  // Log the full error to the console
+        res.statusCode = 500;
+        res.end(JSON.stringify({ error: 'Database query failed', details: err.message }));
+        return;
+      }
+  
+      // Return the results as a JSON response
+      res.statusCode = 200;
+      res.end(JSON.stringify(results));
     });
-    });
-
-    // Execute the insert query with the values
-    const result = await connection.execute(insertQuery, ['Alabama', 'al', 1.04]);
-
-    // Log the entire result object to see its structure
-    console.log("Query Result:", result);
-
-    // Return success response if result is valid
-    if (result && result[0]) {
-      console.log("✅ State inserted successfully:", result);
-      res.status(200).json({
-        message: "State inserted successfully",
-        insertedId: result[0].insertId // Return the ID of the inserted row (if applicable)
-      });
-    } else {
-      console.error("❌ Unexpected result format:", result);
-      res.status(500).json({
-        error: "Unexpected result format",
-        message: "The query did not return the expected result."
-      });
-    }
-
-    // Close the connection
-    await connection.end();
-  } catch (error) {
-    console.error("❌ Database operation failed:", error.message);
-    
-    // Send error response
-    res.status(500).json({
-      error: "Database operation failed",
-      message: error.message
-    });
+  } else {
+    // Handle invalid routes
+    res.statusCode = 404;
+    res.end(JSON.stringify({ error: 'Not Found' }));
   }
-};
+});
+
+// Start the server on port 3000
+server.listen(3000, () => {
+  console.log('Server is running on http://localhost:3000');
+});
