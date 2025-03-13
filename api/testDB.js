@@ -29,15 +29,25 @@ module.exports = async (req, res) => {
     `;
 
     // Execute the insert query with the values
-    const [result] = await connection.execute(insertQuery, ['Alabama', 'al', 1.04]);
+    const result = await connection.execute(insertQuery, ['Alabama', 'al', 1.04]);
 
-    console.log("✅ State inserted successfully:", result);
+    // Log the entire result object to see its structure
+    console.log("Query Result:", result);
 
-    // Return success response
-    res.status(200).json({
-      message: "State inserted successfully",
-      insertedId: result.insertId // Return the ID of the inserted row (if applicable)
-    });
+    // Return success response if result is valid
+    if (result && result[0]) {
+      console.log("✅ State inserted successfully:", result);
+      res.status(200).json({
+        message: "State inserted successfully",
+        insertedId: result[0].insertId // Return the ID of the inserted row (if applicable)
+      });
+    } else {
+      console.error("❌ Unexpected result format:", result);
+      res.status(500).json({
+        error: "Unexpected result format",
+        message: "The query did not return the expected result."
+      });
+    }
 
     // Close the connection
     await connection.end();
