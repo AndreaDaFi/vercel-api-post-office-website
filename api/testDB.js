@@ -1,6 +1,7 @@
 // Import mysql2
 const mysql = require('mysql2'); // Import the MySQL client
-
+const dotenv = require('dotenv'); // Import the dotenv module
+dotenv.config(); // Load environment variables
 module.exports = async (req, res) => {
   try {
     const sslCA = Buffer.from(process.env.DB_SSL_CA, 'base64');
