@@ -30,9 +30,21 @@ module.exports = async (req, res) => {
 
     // SQL query to insert a new state
     const insertQuery = `
-      INSERT INTO state (state_name, state_id, tax)
-      VALUES (?, ?, ?)
+        INSERT INTO state (state_name, state_id, tax)
+        VALUES (?, ?, ?)
     `;
+
+    connection.query(insertQuery, ['Alabama', 'al', 1.04], (err, results) => {
+    if (err) {
+        console.error('Error during insert:', err);
+        return res.status(500).json({ error: 'Insert operation failed', message: err.message });
+    }
+    console.log('Insert successful:', results);
+    res.status(200).json({
+        message: "State inserted successfully",
+        insertedId: results.insertId // Should be available if inserted successfully
+    });
+    });
 
     // Execute the insert query with the values
     const result = await connection.execute(insertQuery, ['Alabama', 'al', 1.04]);
