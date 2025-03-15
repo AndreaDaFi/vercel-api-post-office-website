@@ -3,10 +3,18 @@ import mysql from 'mysql2/promise';
 export default async function handler(req, res) {
   // Set custom headers for CORS and content-type options
   res.setHeader('x-content-type-options', 'nosniff');
-  res.setHeader('Access-Control-Allow-Origin', '*');
+  
+  // CORS headers
+  res.setHeader('Access-Control-Allow-Origin', 'https://post-office-website.vercel.app');  // Allow only the specific frontend
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
+  // Handle OPTIONS request (CORS pre-flight)
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end(); // Respond with status 200 for OPTIONS request
+  }
+
+  // Handle POST requests
   if (req.method === "POST") {
     const {
       firstName,
@@ -46,11 +54,6 @@ export default async function handler(req, res) {
 
       console.log("✅ Database connected!");
 
-      // Log address insertion data
-      console.log("Inserting address with data:", {
-        streetAddress, streetAddress2, apt, cityName, stateID, zipCode
-      });
-
       // Insert address
       const [addressSuccessorNot] = await connection.execute(`
         INSERT INTO address (street, street2, apt, city_name, state_id, zip)
@@ -58,13 +61,7 @@ export default async function handler(req, res) {
       `, [streetAddress, streetAddress2, apt, cityName, stateID, zipCode]);
 
       const newAddID = addressSuccessorNot.insertId;
-
       console.log("Address insert result:", addressSuccessorNot);
-
-      // Log customer insertion data
-      console.log("Inserting customer with data:", {
-        firstName, lastName, birthdate, email, password, phone, securityQuestion, securityAnswer, newAddID
-      });
 
       // Insert customer
       const [custSuccessorNot] = await connection.execute(`
