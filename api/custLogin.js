@@ -54,8 +54,9 @@ export default async function handler(req, res) {
     const user = rows[0];
 
     // 🔹 If passwords are hashed in DB, use bcrypt to compare
-    const isValidPassword = await bcrypt.compare(password, user.password);
-    if (!isValidPassword) {
+    // const isValidPassword = await bcrypt.compare(password, user.password);
+    const isSamePasswor = password === user.password
+    if (!isSamePasswor) {
       console.log("❌ Password mismatch for:", email);
       return res.status(400).json({ success: false, error: "⚠ Invalid email or password." });
     }
