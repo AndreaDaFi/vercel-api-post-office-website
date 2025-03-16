@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     // Fetch user by email
     const [rows] = await connection.execute(
-      "SELECT email, password FROM customers WHERE email = ?",
+      "SELECT * FROM customers WHERE email = ?",
       [email]
     );
 
@@ -52,17 +52,25 @@ export default async function handler(req, res) {
     }
 
     const user = rows[0];
+    console.log("passwords to compare:", password, "and", user.password);
 
     // 🔹 If passwords are hashed in DB, use bcrypt to compare
     // const isValidPassword = await bcrypt.compare(password, user.password);
-    const isSamePasswor = password === user.password
-    if (!isSamePasswor) {
+    const isValidPassword = password === user.password
+
+    if (!isValidPassword) {
       console.log("❌ Password mismatch for:", email);
       return res.status(400).json({ success: false, error: "⚠ Invalid email or password." });
     }
 
     console.log("✅ Login successful for:", email);
-    res.status(200).json({ success: true, message: "🎉 Login successful!" });
+
+    //returns all of the customer's data once they're logged in
+    //THIS IS IMPORTANT because if we don't return the data,
+    //we cant work on other customer pages
+    const { password: _, ...userWithoutPassword } = user;
+    //return the row of data without the password
+    res.status(200).json({ success: true, user: userWithoutPassword, message: "🎉 Login successful!" });
 
   } catch (error) {
     console.error("❌ API Error:", error);
