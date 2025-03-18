@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   res.setHeader('x-content-type-options', 'nosniff');
   
   // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', 'https://post-office-website.vercel.app');  // Allow only the specific frontend
+  res.setHeader('Access-Control-Allow-Origin', '*');  // Allow only the specific frontend
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
@@ -82,7 +82,7 @@ export default async function handler(req, res) {
       const [custSuccessorNot] = await connection.execute(`
         INSERT INTO employees (first_name, last_name, birthdate, salary, hire_date, ssn, role, email, phone, po_id,
         password, security_question, security_answer, mngr_id, employees_address_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [firstName,lastName,birthdate,salary,hire_date,ssn,role,email,phone,po_id,
         password,securityQuestion,securityAnswer,mngr_id, newAddID]);
 
