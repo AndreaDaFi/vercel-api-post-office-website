@@ -1,5 +1,4 @@
 import mysql from 'mysql2/promise';
-import bcrypt from 'bcryptjs'; // Use bcryptjs for password security
 
 export default async function handler(req, res) {
   // Set security headers & CORS policy
