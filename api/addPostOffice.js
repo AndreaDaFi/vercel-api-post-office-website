@@ -38,16 +38,24 @@ export default async function handler(req, res) {
       [street, city_name, state_id, zip]
     );
 
-    const address_id = addressResult.insertId; // ✅ Retrieve auto-incremented ID
+    const address_id = addressResult.insertId; // ✅ Retrieve auto-generated `address_id`
     console.log(`✅ Address inserted with ID: ${address_id}`);
 
     console.log("🟢 Inserting into post_office table...");
-    
+    const [postOfficeResult] = await connection.execute(
+      `INSERT INTO post_office (po_address_id) VALUES (?)`, // ✅ Insert `address_id`
+      [address_id]
+    );
 
     await connection.end();
     console.log("✅ Post Office added successfully!");
 
-    return res.status(201).json({ success: true, message: "✅ Post Office added successfully!", address_id });
+    return res.status(201).json({ 
+      success: true, 
+      message: "✅ Post Office added successfully!", 
+      address_id, 
+      post_office_id: postOfficeResult.insertId // ✅ Get post office ID
+    });
 
   } catch (error) {
     console.error("❌ API Error:", error);
