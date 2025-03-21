@@ -30,7 +30,7 @@ export default async function handler(req, res) {
 
       // ✅ Fetch employees based on manager's ID (po_id)
       const [rows] = await connection.execute(
-        `SELECT * FROM transactions WHERE po_id = ?`, [po_id] // Use the manager's ID to filter employees
+        `SELECT p.tracking_number, p.weight, p.status, p.origin_address_id, FROM packages AS p,transactions AS t WHERE po_id = ?`, [po_id] // Use the manager's ID to filter employees
       );
 
       await connection.end();
