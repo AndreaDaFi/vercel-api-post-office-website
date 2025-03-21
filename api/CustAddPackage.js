@@ -1,6 +1,7 @@
+
 import mysql from 'mysql2/promise';
 
-export default async function handler(res) {
+export default async function handler(req, res) {
   // Set custom headers for CORS and content-type options
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('Access-Control-Allow-Origin', '*');  // You can replace '*' with your actual frontend URL for better security
@@ -24,12 +25,12 @@ export default async function handler(res) {
     console.log("✅ Database connected!");
 
     const [rows] = await connection.execute(`
-        SELECT po_id, 
-               CONCAT(street, ', ', city_name, ' ', state_id, ' ', zip) AS address
-        FROM post_office
-        JOIN address ON post_office.po_address_id = address.address_id;
-      `);
-      await connection.end();
+      SELECT po_id, 
+             CONCAT(street, ', ', city_name, ' ', state_id, ' ', zip) AS address
+      FROM post_office
+      JOIN address ON post_office.po_address_id = address.address_id;
+    `);
+    await connection.end();
 
     console.log("✅ Query executed successfully!", rows);
     res.status(200).json({ success: true, data: rows });
