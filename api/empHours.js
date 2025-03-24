@@ -39,7 +39,7 @@ export default async function handler(req, res) {
 
     // Validate employees_id
     const [employeeExists] = await connection.execute(
-      "SELECT COUNT(*) AS count FROM employees WHERE id = ?",
+      "SELECT COUNT(*) AS count FROM employees WHERE employees_id = ?",
       [employees_id]
     );
     if (employeeExists[0].count === 0) {
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
 
     // Validate po_id
     const [postOfficeExists] = await connection.execute(
-      "SELECT COUNT(*) AS count FROM post_offices WHERE id = ?",
+      "SELECT COUNT(*) AS count FROM post_office WHERE po_id = ?",
       [po_id]
     );
     if (postOfficeExists[0].count === 0) {
