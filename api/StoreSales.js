@@ -28,9 +28,18 @@ export default async function handler(req, res) {
 
       console.log("✅ Database connected!");
 
-      // ✅ Fetch employees based on manager's ID (po_id)
       const [rows] = await connection.execute(
-        `SELECT p.tracking_number, p.weight, p.status, p.origin_address_id, FROM packages AS p,transactions AS t WHERE po_id = ?`, [po_id] // Use the manager's ID to filter employees
+        `SELECT p.tracking_number, p.type, p.weight, p.size, p.status, t.transaction_date, 
+        ao.state_id AS 'origin_state',ao.city_name AS 'origin_city',
+        ad.state_id AS 'destination_state', ad.city_name AS 'destination_city',
+        purchased_insurance, fast_delivery, fragile, total_amount, ROUND(total_tax,2) AS 'total_tax'
+FROM packages AS p 
+JOIN transactions AS t ON p.po_id=t.po_id 
+JOIN address AS ao ON ao.address_id=origin_address_id 
+JOIN address as ad ON ad.address_id=destination_address_id 
+WHERE p.po_id = ? 
+AND p.type IS NOT NULL
+AND p.tracking_number=t.packages_tracking_number`, [po_id]
       );
 
       await connection.end();
