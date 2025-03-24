@@ -17,10 +17,10 @@ export default async function handler(req, res) {
     const { trackingNumber, employeeId, status } = req.body;
 
     // Validate input data
-    if (!trackingNumber || trackingNumber.length !== 10) {
+    if (!trackingNumber) {
       return res.status(400).json({ success: false, error: 'Invalid tracking number.' });
     }
-    if (!employeeId || employeeId.length !== 6) {
+    if (!employeeId) {
       return res.status(400).json({ success: false, error: 'Invalid employee ID.' });
     }
     if (!status) {
