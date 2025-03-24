@@ -29,7 +29,7 @@ export default async function handler(req, res) {
 
       // ✅ Fetch employees based on manager's ID (po_id)
       const [rows] = await connection.execute(
-        `SELECT item_name, item_price, stock, item_category FROM items_for_sale WHERE po_id=?;`, [po_id]
+        `SELECT item_name, item_price, stock, item_category, item_id FROM items_for_sale WHERE po_id=?;`, [po_id]
       );
 
       await connection.end();
