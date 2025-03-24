@@ -96,7 +96,7 @@ export default async function handler(req, res) {
         // Log the update in employees_updates_to_packages table
         await connection.execute(
           `INSERT INTO employees_updates_to_packages 
-           (employees_id, tracking_number, customers_id, previous_status, updated_status, status_update_datetime)
+           (employees_id, tracking_number, customers_id, previoust_status, updated_status, status_update_datetime)
            VALUES (?, ?, ?, ?, ?, NOW())`,
           [employeeId, trackingNumber, customersId, previousStatus, status]
         );
