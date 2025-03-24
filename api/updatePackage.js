@@ -55,9 +55,9 @@ export default async function handler(req, res) {
 
       console.log(`Employee found with post office ID: ${employeePostOfficeId}`);
 
-      // Check if package exists and retrieve its post office ID and current status
+      // Check if package exists and retrieve its post office ID, current status, and customer ID
       const [packageRows] = await connection.execute(
-        `SELECT po_id, status FROM packages WHERE tracking_number = ?`,
+        `SELECT po_id, status, customers_id FROM packages WHERE tracking_number = ?`,
         [trackingNumber]
       );
 
@@ -68,8 +68,9 @@ export default async function handler(req, res) {
 
       const packagePostOfficeId = packageRows[0].po_id;
       const previousStatus = packageRows[0].status;
+      const customersId = packageRows[0].customers_id;
 
-      console.log(`Package found with post office ID: ${packagePostOfficeId}, current status: ${previousStatus}`);
+      console.log(`Package found with post office ID: ${packagePostOfficeId}, current status: ${previousStatus}, customer ID: ${customersId}`);
 
       // Ensure the employee is authorized to update the package
       if (employeePostOfficeId !== packagePostOfficeId) {
@@ -95,9 +96,9 @@ export default async function handler(req, res) {
         // Log the update in employees_updates_to_packages table
         await connection.execute(
           `INSERT INTO employees_updates_to_packages 
-           (employees_id, tracking_number, previous_status, updated_status, status_update_datetime)
-           VALUES (?, ?, ?, ?, NOW())`,
-          [employeeId, trackingNumber, previousStatus, status]
+           (employees_id, tracking_number, customers_id, previous_status, updated_status, status_update_datetime)
+           VALUES (?, ?, ?, ?, ?, NOW())`,
+          [employeeId, trackingNumber, customersId, previousStatus, status]
         );
 
         console.log("Update logged in employees_updates_to_packages table");
@@ -109,7 +110,7 @@ export default async function handler(req, res) {
         console.log("✅ Transaction committed successfully!");
 
         return res.status(200).json({ success: true, message: 'Package status updated successfully.' });
-      
+
       } catch (transactionError) {
         console.error("❌ Error during transaction:", transactionError);
 
