@@ -5,7 +5,7 @@ export default async function handler(req, res) {
   res.setHeader('x-content-type-options', 'nosniff');
   
   // CORS headers
-  res.setHeader('Access-Control-Allow-Origin', 'https://post-office-website.vercel.app');  // Allow only the specific frontend
+  res.setHeader('Access-Control-Allow-Origin', '*');  // Allow only the specific frontend
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
