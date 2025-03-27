@@ -2,13 +2,17 @@ import mysql from "mysql2/promise"
 
 export default async function handler(req, res) {
   try {
+    // Set CORS headers for all responses
     res.setHeader("Access-Control-Allow-Origin", "*")
     res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+    res.setHeader("Access-Control-Max-Age", "86400") // 24 hours
 
     console.log(`🔍 Request method: ${req.method}, URL: ${req.url}`)
 
+    // Handle preflight OPTIONS request first
     if (req.method === "OPTIONS") {
+      console.log("✅ Responding to OPTIONS preflight request")
       return res.status(204).end()
     }
 
