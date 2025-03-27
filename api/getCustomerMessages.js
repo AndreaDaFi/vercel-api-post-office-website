@@ -129,46 +129,84 @@ export default async function handler(req, res) {
         // First, log the messages that will be deleted for debugging
         const [messagesToDelete] = await connection.execute(
           "SELECT id, message, customer_id, package_id FROM customer_messages WHERE customer_id = ?",
-          [customer_id]
+          [customer_id],
         )
-        
-        console.log(`🔍 Found ${messagesToDelete.length} messages to delete:`, 
-          messagesToDelete.map(m => `ID: ${m.id}, Message: ${m.message}, Customer ID: ${m.customer_id}, Package ID: ${m.package_id}`).join(', '))
+
+        console.log(
+          `🔍 Found ${messagesToDelete.length} messages to delete:`,
+          messagesToDelete
+            .map(
+              (m) => `ID: ${m.id}, Message: ${m.message}, Customer ID: ${m.customer_id}, Package ID: ${m.package_id}`,
+            )
+            .join(", "),
+        )
 
         // HARD DELETE: Actually DELETE the messages from the database completely
         console.log(`🔥 Executing DELETE FROM customer_messages WHERE customer_id = ${customer_id}`)
-        
-        const [deleteResult] = await connection.execute(
-          "DELETE FROM customer_messages WHERE customer_id = ?", 
-          [customer_id]
-        )
 
-        console.log(`🗑️ DELETE operation result:`, JSON.stringify(deleteResult))
-        console.log(`🗑️ Messages permanently deleted: ${deleteResult.affectedRows}`)
+        try {
+          // Try with direct SQL query first
+          const [deleteResult] = await connection.execute("DELETE FROM customer_messages WHERE customer_id = ?", [
+            customer_id,
+          ])
 
-        // Verify deletion
-        const [verifyDelete] = await connection.execute(
-          "SELECT COUNT(*) as count FROM customer_messages WHERE customer_id = ?",
-          [customer_id]
-        )
-        
-        console.log(`✅ Verification after delete: ${verifyDelete[0].count} messages remain for customer ${customer_id}`)
+          console.log(`🗑️ DELETE operation result:`, JSON.stringify(deleteResult))
+          console.log(`🗑️ Messages permanently deleted: ${deleteResult.affectedRows}`)
 
-        await connection.end()
+          // Verify deletion
+          const [verifyDelete] = await connection.execute(
+            "SELECT COUNT(*) as count FROM customer_messages WHERE customer_id = ?",
+            [customer_id],
+          )
 
-        return res.status(200).json({
-          success: true,
-          message: `${deleteResult.affectedRows} messages permanently deleted from database.`,
-          deletedCount: deleteResult.affectedRows,
-          remainingCount: verifyDelete[0].count
-        })
+          console.log(
+            `✅ Verification after delete: ${verifyDelete[0].count} messages remain for customer ${customer_id}`,
+          )
+
+          await connection.end()
+
+          return res.status(200).json({
+            success: true,
+            message: `${deleteResult.affectedRows} messages permanently deleted from database.`,
+            deletedCount: deleteResult.affectedRows,
+            remainingCount: verifyDelete[0].count,
+          })
+        } catch (deleteError) {
+          console.error("❌ Delete Error:", deleteError.message)
+
+          // If direct delete fails, try updating is_deleted flag as fallback
+          console.log("⚠️ Direct delete failed, trying soft delete as fallback")
+
+          try {
+            const [updateResult] = await connection.execute(
+              "UPDATE customer_messages SET is_deleted = 1, is_read = 1 WHERE customer_id = ?",
+              [customer_id],
+            )
+
+            console.log(`🔄 UPDATE operation result:`, JSON.stringify(updateResult))
+            console.log(`🔄 Messages marked as deleted: ${updateResult.affectedRows}`)
+
+            await connection.end()
+
+            return res.status(200).json({
+              success: true,
+              message: `${updateResult.affectedRows} messages marked as deleted.`,
+              deletedCount: updateResult.affectedRows,
+              method: "soft-delete",
+            })
+          } catch (updateError) {
+            console.error("❌ Update Error:", updateError.message)
+            await connection.end()
+            throw updateError
+          }
+        }
       } catch (error) {
         console.error("❌ Database Error:", error.message)
         // Even if there's an error, return success to ensure the frontend still clears the messages
         return res.status(200).json({
           success: true,
           message: "Messages deleted (simulated).",
-          error: error.message
+          error: error.message,
         })
       }
     }
@@ -179,3 +217,4 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: "Internal Server Error" })
   }
 }
+
