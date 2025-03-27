@@ -128,7 +128,18 @@ export default async function handler(req, res) {
           })
         }
 
-        // Actually DELETE the messages from the database instead of just marking them
+        // First, log the messages that will be deleted for debugging
+        const [messagesToDelete] = await connection.execute(
+          "SELECT id, message FROM customer_messages WHERE customer_id = ?",
+          [customer_id],
+        )
+
+        console.log(
+          `🔍 Found ${messagesToDelete.length} messages to delete:`,
+          messagesToDelete.map((m) => `ID: ${m.id}, Message: ${m.message}`).join(", "),
+        )
+
+        // Actually DELETE the messages from the database
         const [deleteResult] = await connection.execute("DELETE FROM customer_messages WHERE customer_id = ?", [
           customer_id,
         ])
@@ -139,6 +150,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: `${deleteResult.affectedRows} messages permanently deleted from database.`,
+          deletedCount: deleteResult.affectedRows,
         })
       } catch (error) {
         console.error("❌ Database Error:", error.message)
@@ -146,6 +158,7 @@ export default async function handler(req, res) {
         return res.status(200).json({
           success: true,
           message: "Messages deleted (simulated).",
+          error: error.message,
         })
       }
     }
