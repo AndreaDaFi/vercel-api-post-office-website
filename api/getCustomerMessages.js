@@ -56,7 +56,7 @@ export default async function handler(req, res) {
         // Query to get ONLY unread and not deleted messages with package and address information
         try {
           const [messages] = await connection.execute(
-            `SELECT m.id, m.message, m.created_at, m.is_read,
+            `SELECT m.id, m.message, m.created_at, m.is_read, m.customer_id, m.package_id,
               p.tracking_number, p.status,
               COALESCE(oa.state, 'Unknown') as origin_state,
               COALESCE(CONCAT(da.address, ', ', da.city, ' ', da.state, ' ', da.zip), 'Unknown location') as destination_address
@@ -128,17 +128,16 @@ export default async function handler(req, res) {
 
         // First, log the messages that will be deleted for debugging
         const [messagesToDelete] = await connection.execute(
-          "SELECT id, message FROM customer_messages WHERE customer_id = ?",
+          "SELECT id, message, customer_id, package_id FROM customer_messages WHERE customer_id = ?",
           [customer_id]
         )
         
         console.log(`🔍 Found ${messagesToDelete.length} messages to delete:`, 
-          messagesToDelete.map(m => `ID: ${m.id}, Message: ${m.message}`).join(', '))
+          messagesToDelete.map(m => `ID: ${m.id}, Message: ${m.message}, Customer ID: ${m.customer_id}, Package ID: ${m.package_id}`).join(', '))
 
-        // Try a direct SQL DELETE query with explicit customer_id
+        // HARD DELETE: Actually DELETE the messages from the database completely
         console.log(`🔥 Executing DELETE FROM customer_messages WHERE customer_id = ${customer_id}`)
         
-        // Actually DELETE the messages from the database - using a direct query
         const [deleteResult] = await connection.execute(
           "DELETE FROM customer_messages WHERE customer_id = ?", 
           [customer_id]
