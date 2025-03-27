@@ -88,7 +88,9 @@ export default async function handler(req, res) {
       }
     }
 
-    // Handle DELETE method to mark messages as read and deleted
+    // Replace the DELETE method handler with this updated version that actually deletes records from the database
+
+    // Handle DELETE method to completely remove messages from the database
     if (req.method === "DELETE") {
       let customer_id
 
@@ -100,7 +102,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: "⚠ Missing customer ID." })
       }
 
-      console.log(`🗑️ Marking messages as read and deleted for customer ID: ${customer_id}`)
+      console.log(`🗑️ Permanently deleting messages for customer ID: ${customer_id}`)
 
       try {
         const connection = await mysql.createConnection({
@@ -122,37 +124,28 @@ export default async function handler(req, res) {
           await connection.end()
           return res.status(200).json({
             success: true,
-            message: "Messages marked as deleted (simulated).",
+            message: "Messages deleted (simulated).",
           })
         }
 
-        // First mark messages as read
-        const [readResult] = await connection.execute(
-          "UPDATE customer_messages SET is_read = 1 WHERE customer_id = ? AND is_read = 0",
-          [customer_id],
-        )
-
-        console.log(`📖 Messages marked as read: ${readResult.affectedRows}`)
-
-        // Then mark messages as deleted
-        const [deleteResult] = await connection.execute(
-          "UPDATE customer_messages SET is_deleted = 1 WHERE customer_id = ? AND is_deleted = 0",
-          [customer_id],
-        )
+        // Actually DELETE the messages from the database instead of just marking them
+        const [deleteResult] = await connection.execute("DELETE FROM customer_messages WHERE customer_id = ?", [
+          customer_id,
+        ])
 
         await connection.end()
-        console.log(`🗑️ Messages marked as deleted: ${deleteResult.affectedRows}`)
+        console.log(`🗑️ Messages permanently deleted: ${deleteResult.affectedRows}`)
 
         return res.status(200).json({
           success: true,
-          message: `${readResult.affectedRows} messages marked as read and ${deleteResult.affectedRows} messages marked as deleted.`,
+          message: `${deleteResult.affectedRows} messages permanently deleted from database.`,
         })
       } catch (error) {
         console.error("❌ Database Error:", error.message)
         // Even if there's an error, return success to ensure the frontend still clears the messages
         return res.status(200).json({
           success: true,
-          message: "Messages marked as deleted (simulated).",
+          message: "Messages deleted (simulated).",
         })
       }
     }
