@@ -32,34 +32,6 @@ export default async function handler(req, res) {
       console.log(`👤 Parsed customer_id: ${customer_id}`)
       console.log(`🔍 Fetching messages for customer ID: ${customer_id}`)
 
-      // Create test messages for development/testing
-      const testMessages = [
-        {
-          id: "test-1",
-          message: "Your package has been delivered",
-          created_at: new Date().toISOString(),
-          is_read: 0,
-          tracking_number: "TEST123456",
-          status: "Delivered",
-          origin_state: "TX",
-          destination_address: "123 Test St, Austin, TX 78701",
-        },
-        {
-          id: "test-2",
-          message: "Your package is out for delivery",
-          created_at: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
-          is_read: 0,
-          tracking_number: "TEST789012",
-          status: "Out for Delivery",
-          origin_state: "CA",
-          destination_address: "456 Demo Ave, Los Angeles, CA 90001",
-        },
-      ]
-
-      // IMPORTANT: For testing, you can bypass the database query and return test messages
-      // Uncomment the next line to always return test messages
-      // return res.status(200).json({ success: true, messages: testMessages });
-
       try {
         const connection = await mysql.createConnection({
           host: process.env.DBHOST,
@@ -76,12 +48,12 @@ export default async function handler(req, res) {
         const [tables] = await connection.execute("SHOW TABLES LIKE 'customer_messages'")
 
         if (tables.length === 0) {
-          console.log("⚠️ customer_messages table does not exist, returning test messages")
+          console.log("⚠️ customer_messages table does not exist, returning empty messages")
           await connection.end()
-          return res.status(200).json({ success: true, messages: testMessages })
+          return res.status(200).json({ success: true, messages: [] })
         }
 
-        // Query to get messages with package and address information
+        // Query to get ONLY unread and not deleted messages with package and address information
         try {
           const [messages] = await connection.execute(
             `SELECT m.id, m.message, m.created_at, m.is_read,
@@ -92,33 +64,31 @@ export default async function handler(req, res) {
             LEFT JOIN packages p ON m.package_id = p.id
             LEFT JOIN addresses oa ON p.packages_origin_address_id = oa.id
             LEFT JOIN addresses da ON p.packages_destination_address_id = da.id
-            WHERE m.customer_id = ? AND m.is_deleted = 0
+            WHERE m.customer_id = ? AND m.is_deleted = 0 AND m.is_read = 0
             ORDER BY m.created_at DESC`,
             [customer_id],
           )
 
           await connection.end()
-          console.log(`📨 Messages found: ${messages.length}`)
-          console.log(`📊 Raw messages data:`, JSON.stringify(messages))
+          console.log(`📨 Unread messages found: ${messages.length}`)
 
-          if (messages.length === 0) {
-            console.log("⚠️ No messages found, returning test messages")
-            return res.status(200).json({ success: true, messages: testMessages })
+          if (messages.length > 0) {
+            console.log(`📊 First message:`, JSON.stringify(messages[0]))
           }
 
           return res.status(200).json({ success: true, messages })
         } catch (queryError) {
           console.error("❌ Query Error:", queryError.message)
           await connection.end()
-          return res.status(200).json({ success: true, messages: testMessages })
+          return res.status(200).json({ success: true, messages: [] })
         }
       } catch (dbError) {
         console.error("❌ Database Error:", dbError.message)
-        return res.status(200).json({ success: true, messages: testMessages })
+        return res.status(200).json({ success: true, messages: [] })
       }
     }
 
-    // Handle DELETE method to mark messages as deleted
+    // Handle DELETE method to mark messages as read and deleted
     if (req.method === "DELETE") {
       let customer_id
 
@@ -130,7 +100,7 @@ export default async function handler(req, res) {
         return res.status(400).json({ success: false, error: "⚠ Missing customer ID." })
       }
 
-      console.log(`🗑️ Marking messages as deleted for customer ID: ${customer_id}`)
+      console.log(`🗑️ Marking messages as read and deleted for customer ID: ${customer_id}`)
 
       try {
         const connection = await mysql.createConnection({
@@ -156,17 +126,26 @@ export default async function handler(req, res) {
           })
         }
 
-        // Update messages to mark them as deleted
-        const [result] = await connection.execute("UPDATE customer_messages SET is_deleted = 1 WHERE customer_id = ?", [
-          customer_id,
-        ])
+        // First mark messages as read
+        const [readResult] = await connection.execute(
+          "UPDATE customer_messages SET is_read = 1 WHERE customer_id = ? AND is_read = 0",
+          [customer_id],
+        )
+
+        console.log(`📖 Messages marked as read: ${readResult.affectedRows}`)
+
+        // Then mark messages as deleted
+        const [deleteResult] = await connection.execute(
+          "UPDATE customer_messages SET is_deleted = 1 WHERE customer_id = ? AND is_deleted = 0",
+          [customer_id],
+        )
 
         await connection.end()
-        console.log(`🗑️ Messages marked as deleted: ${result.affectedRows}`)
+        console.log(`🗑️ Messages marked as deleted: ${deleteResult.affectedRows}`)
 
         return res.status(200).json({
           success: true,
-          message: `${result.affectedRows} messages marked as deleted.`,
+          message: `${readResult.affectedRows} messages marked as read and ${deleteResult.affectedRows} messages marked as deleted.`,
         })
       } catch (error) {
         console.error("❌ Database Error:", error.message)
