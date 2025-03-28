@@ -1,31 +1,30 @@
+import { NextRequest, NextResponse } from "next/server";
 import mysql from "mysql2/promise";
 
-export default async function handler(req, res) {
-  // ✅ Set CORS headers for ALL responses (must be before anything else!)
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
-  res.setHeader("Access-Control-Max-Age", "86400");
+// Helper function to set CORS headers
+function setCorsHeaders(response: NextResponse) {
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  response.headers.set("Access-Control-Max-Age", "86400");
+  return response;
+}
 
-  // ✅ Handle preflight requests
-  if (req.method === "OPTIONS") {
-    return res.status(204).end(); // No content
-  }
+export async function OPTIONS() {
+  const response = new NextResponse(null, { status: 204 });
+  return setCorsHeaders(response);
+}
 
-  // 🔄 Get customer_id from either query param or body
-  let customer_id;
-  if (req.method === "GET") {
-    const pathParts = req.url.split("/");
-    customer_id = pathParts[pathParts.length - 1];
-  } else if (req.body?.customer_id) {
-    customer_id = req.body.customer_id;
-  } else {
-    const pathParts = req.url.split("/");
-    customer_id = pathParts[pathParts.length - 1];
-  }
+export async function GET(request: NextRequest) {
+  // Extract customer_id from the URL
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split("/");
+  const customer_id = pathParts[pathParts.length - 1];
 
-  if (!customer_id) {
-    return res.status(400).json({ success: false, error: "Missing customer ID." });
+  if (!customer_id || customer_id === "customer-messages") {
+    return setCorsHeaders(
+      NextResponse.json({ success: false, error: "Missing customer ID." }, { status: 400 })
+    );
   }
 
   try {
@@ -37,44 +36,125 @@ export default async function handler(req, res) {
       ssl: process.env.DB_SSL_CA ? { ca: Buffer.from(process.env.DB_SSL_CA, "base64") } : false,
     });
 
-    if (req.method === "GET" || req.method === "POST") {
-      const [messages] = await connection.execute(
-        `SELECT m.id, m.message, m.created_at, m.is_read, m.customer_id, m.package_id,
-                p.tracking_number, p.status,
-                COALESCE(oa.state, 'Unknown') as origin_state,
-                COALESCE(CONCAT(da.address, ', ', da.city, ' ', da.state, ' ', da.zip), 'Unknown') as destination_address
-         FROM customer_messages m
-         LEFT JOIN packages p ON m.package_id = p.id
-         LEFT JOIN addresses oa ON p.packages_origin_address_id = oa.id
-         LEFT JOIN addresses da ON p.packages_destination_address_id = da.id
-         WHERE m.customer_id = ? AND m.is_read = 0 AND m.is_deleted = 0
-         ORDER BY m.created_at DESC`,
-        [customer_id]
-      );
+    const [messages] = await connection.execute(
+      `SELECT m.id, m.message, m.created_at, m.is_read, m.customer_id, m.package_id,
+              p.tracking_number, p.status,
+              COALESCE(oa.state, 'Unknown') as origin_state,
+              COALESCE(CONCAT(da.address, ', ', da.city, ' ', da.state, ' ', da.zip), 'Unknown') as destination_address
+       FROM customer_messages m
+       LEFT JOIN packages p ON m.package_id = p.id
+       LEFT JOIN addresses oa ON p.packages_origin_address_id = oa.id
+       LEFT JOIN addresses da ON p.packages_destination_address_id = da.id
+       WHERE m.customer_id = ? AND m.is_read = 0 AND m.is_deleted = 0
+       ORDER BY m.created_at DESC`,
+      [customer_id]
+    );
 
-      await connection.end();
-      return res.status(200).json({ success: true, messages });
-    }
-
-    if (req.method === "DELETE") {
-      const [deleted] = await connection.execute(
-        `DELETE FROM customer_messages WHERE customer_id = ?`,
-        [customer_id]
-      );
-      await connection.end();
-
-      return res.status(200).json({
-        success: true,
-        message: `${deleted.affectedRows} messages permanently deleted.`,
-        deletedCount: deleted.affectedRows,
-      });
-    }
-
-    // If method not supported
     await connection.end();
-    return res.status(405).json({ success: false, error: "Method Not Allowed" });
-  } catch (err) {
+    
+    return setCorsHeaders(
+      NextResponse.json({ success: true, messages })
+    );
+  } catch (err: any) {
     console.error("❌ Server error:", err.message);
-    return res.status(500).json({ success: false, error: "Internal Server Error" });
+    return setCorsHeaders(
+      NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 })
+    );
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  // Extract customer_id from the URL
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split("/");
+  const customer_id = pathParts[pathParts.length - 1];
+
+  if (!customer_id || customer_id === "customer-messages") {
+    return setCorsHeaders(
+      NextResponse.json({ success: false, error: "Missing customer ID." }, { status: 400 })
+    );
+  }
+
+  try {
+    const connection = await mysql.createConnection({
+      host: process.env.DBHOST,
+      user: process.env.DBUSER,
+      password: process.env.DBPASS,
+      database: process.env.DBNAME,
+      ssl: process.env.DB_SSL_CA ? { ca: Buffer.from(process.env.DB_SSL_CA, "base64") } : false,
+    });
+
+    const [deleted] = await connection.execute(
+      `DELETE FROM customer_messages WHERE customer_id = ?`,
+      [customer_id]
+    );
+
+    await connection.end();
+    
+    return setCorsHeaders(
+      NextResponse.json({
+        success: true,
+        message: `${(deleted as any).affectedRows} messages permanently deleted.`,
+        deletedCount: (deleted as any).affectedRows,
+      })
+    );
+  } catch (err: any) {
+    console.error("❌ Server error:", err.message);
+    return setCorsHeaders(
+      NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 })
+    );
+  }
+}
+
+export async function PUT(request: NextRequest) {
+  // Extract customer_id from the URL
+  const url = new URL(request.url);
+  const pathParts = url.pathname.split("/");
+  const customer_id = pathParts[pathParts.length - 1];
+
+  if (!customer_id || customer_id === "customer-messages") {
+    return setCorsHeaders(
+      NextResponse.json({ success: false, error: "Missing customer ID." }, { status: 400 })
+    );
+  }
+
+  try {
+    const body = await request.json();
+    const messageId = body.messageId;
+
+    if (!messageId) {
+      return setCorsHeaders(
+        NextResponse.json({ success: false, error: "Missing message ID." }, { status: 400 })
+      );
+    }
+
+    const connection = await mysql.createConnection({
+      host: process.env.DBHOST,
+      user: process.env.DBUSER,
+      password: process.env.DBPASS,
+      database: process.env.DBNAME,
+      ssl: process.env.DB_SSL_CA ? { ca: Buffer.from(process.env.DB_SSL_CA, "base64") } : false,
+    });
+
+    // Update the is_read status to 1 (read)
+    const [updated] = await connection.execute(
+      `UPDATE customer_messages SET is_read = 1 WHERE id = ? AND customer_id = ?`,
+      [messageId, customer_id]
+    );
+
+    await connection.end();
+    
+    return setCorsHeaders(
+      NextResponse.json({
+        success: true,
+        message: `Message marked as read.`,
+        updatedCount: (updated as any).affectedRows,
+      })
+    );
+  } catch (err: any) {
+    console.error("❌ Server error:", err.message);
+    return setCorsHeaders(
+      NextResponse.json({ success: false, error: "Internal Server Error" }, { status: 500 })
+    );
   }
 }
