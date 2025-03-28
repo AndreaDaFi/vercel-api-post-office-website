@@ -96,9 +96,14 @@ export default async function handler(req, res) {
     if (req.method === "DELETE") {
       let customer_id
 
-      // Extract customer_id from URL path
-      const pathParts = req.url.split("/")
-      customer_id = pathParts[pathParts.length - 1]
+      if (req.method === "DELETE" && req.body && req.body.customer_id) {
+        // Extract from request body if provided
+        customer_id = req.body.customer_id
+      } else {
+        // Extract customer_id from URL path
+        const pathParts = req.url.split("/")
+        customer_id = pathParts[pathParts.length - 1]
+      }
 
       if (!customer_id) {
         return res.status(400).json({ success: false, error: "⚠ Missing customer ID." })
@@ -130,26 +135,10 @@ export default async function handler(req, res) {
           })
         }
 
-        // First, log the messages that will be deleted for debugging
-        const [messagesToDelete] = await connection.execute(
-          "SELECT id, message, customer_id, package_id FROM customer_messages WHERE customer_id = ?",
-          [customer_id],
-        )
-
-        console.log(
-          `🔍 Found ${messagesToDelete.length} messages to delete:`,
-          messagesToDelete
-            .map(
-              (m) => `ID: ${m.id}, Message: ${m.message}, Customer ID: ${m.customer_id}, Package ID: ${m.package_id}`,
-            )
-            .join(", "),
-        )
-
         // HARD DELETE: Actually DELETE the messages from the database completely
         console.log(`🔥 Executing DELETE FROM customer_messages WHERE customer_id = ${customer_id}`)
 
         try {
-          // Try with direct SQL query first
           const [deleteResult] = await connection.execute("DELETE FROM customer_messages WHERE customer_id = ?", [
             customer_id,
           ])
@@ -157,23 +146,12 @@ export default async function handler(req, res) {
           console.log(`🗑️ DELETE operation result:`, JSON.stringify(deleteResult))
           console.log(`🗑️ Messages permanently deleted: ${deleteResult.affectedRows}`)
 
-          // Verify deletion
-          const [verifyDelete] = await connection.execute(
-            "SELECT COUNT(*) as count FROM customer_messages WHERE customer_id = ?",
-            [customer_id],
-          )
-
-          console.log(
-            `✅ Verification after delete: ${verifyDelete[0].count} messages remain for customer ${customer_id}`,
-          )
-
           await connection.end()
 
           return res.status(200).json({
             success: true,
             message: `${deleteResult.affectedRows} messages permanently deleted from database.`,
             deletedCount: deleteResult.affectedRows,
-            remainingCount: verifyDelete[0].count,
           })
         } catch (deleteError) {
           console.error("❌ Delete Error:", deleteError.message)
