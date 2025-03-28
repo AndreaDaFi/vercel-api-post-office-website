@@ -1,22 +1,22 @@
 import mysql from "mysql2/promise"
 
 export default async function handler(req, res) {
-  // ✅ Set CORS headers for *all* responses
+  // CORS headers
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
-  res.setHeader("Access-Control-Max-Age", "86400")
+  res.setHeader("Access-Control-Max-Age", "86400") // cache for 24h
 
-  // ✅ Handle preflight OPTIONS request
+  // Handle preflight request
   if (req.method === "OPTIONS") {
     return res.status(204).end()
   }
 
-  const customer_id =
-    req.method === "POST" ? req.body.customer_id : req.query.customer_id
+  // Get customer_id from query param
+  const { customer_id } = req.query
 
   if (!customer_id) {
-    return res.status(400).json({ success: false, error: "⚠ Missing customer ID." })
+    return res.status(400).json({ success: false, error: "Missing customer ID" })
   }
 
   try {
@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       connectTimeout: 5000,
     })
 
-    if (req.method === "GET" || req.method === "POST") {
+    if (req.method === "GET") {
       const [messages] = await connection.execute(
         `SELECT m.id, m.message, m.created_at, m.is_read, m.customer_id, m.package_id,
                 p.tracking_number, p.status,
@@ -50,7 +50,7 @@ export default async function handler(req, res) {
 
     if (req.method === "DELETE") {
       const [result] = await connection.execute(
-        "DELETE FROM customer_messages WHERE customer_id = ?",
+        `DELETE FROM customer_messages WHERE customer_id = ?`,
         [customer_id]
       )
 
@@ -62,10 +62,9 @@ export default async function handler(req, res) {
       })
     }
 
-    await connection.end()
-    return res.status(405).json({ success: false, error: "Method Not Allowed." })
-  } catch (error) {
-    console.error("❌ DB Error:", error.message)
+    return res.status(405).json({ success: false, error: "Method Not Allowed" })
+  } catch (err) {
+    console.error("❌ DB Error:", err)
     return res.status(500).json({ success: false, error: "Internal Server Error" })
   }
 }
