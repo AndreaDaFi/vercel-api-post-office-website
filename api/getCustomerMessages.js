@@ -1,17 +1,19 @@
 import mysql from "mysql2/promise"
 
 export default async function handler(req, res) {
+  // ✅ Set CORS headers for *all* responses
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
   res.setHeader("Access-Control-Max-Age", "86400")
 
+  // ✅ Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
     return res.status(204).end()
   }
 
-  const pathParts = req.url.split("/")
-  const customer_id = pathParts[pathParts.length - 1]
+  const customer_id =
+    req.method === "POST" ? req.body.customer_id : req.query.customer_id
 
   if (!customer_id) {
     return res.status(400).json({ success: false, error: "⚠ Missing customer ID." })
@@ -27,12 +29,12 @@ export default async function handler(req, res) {
       connectTimeout: 5000,
     })
 
-    if (req.method === "GET") {
+    if (req.method === "GET" || req.method === "POST") {
       const [messages] = await connection.execute(
         `SELECT m.id, m.message, m.created_at, m.is_read, m.customer_id, m.package_id,
                 p.tracking_number, p.status,
                 COALESCE(oa.state, 'Unknown') as origin_state,
-                COALESCE(CONCAT(da.address, ', ', da.city, ' ', da.state, ' ', da.zip), 'Unknown location') as destination_address
+                COALESCE(CONCAT(da.address, ', ', da.city, ' ', da.state, ' ', da.zip), 'Unknown') as destination_address
          FROM customer_messages m
          LEFT JOIN packages p ON m.package_id = p.id
          LEFT JOIN addresses oa ON p.packages_origin_address_id = oa.id
@@ -47,23 +49,23 @@ export default async function handler(req, res) {
     }
 
     if (req.method === "DELETE") {
-      const [deleteResult] = await connection.execute(
-        `DELETE FROM customer_messages WHERE customer_id = ?`,
+      const [result] = await connection.execute(
+        "DELETE FROM customer_messages WHERE customer_id = ?",
         [customer_id]
       )
 
       await connection.end()
       return res.status(200).json({
         success: true,
-        message: `${deleteResult.affectedRows} messages deleted.`,
-        deletedCount: deleteResult.affectedRows,
+        message: `${result.affectedRows} messages deleted.`,
+        deletedCount: result.affectedRows,
       })
     }
 
     await connection.end()
-    return res.status(405).json({ success: false, error: "Method Not Allowed" })
+    return res.status(405).json({ success: false, error: "Method Not Allowed." })
   } catch (error) {
-    console.error("❌ API Error:", error.message)
+    console.error("❌ DB Error:", error.message)
     return res.status(500).json({ success: false, error: "Internal Server Error" })
   }
 }
