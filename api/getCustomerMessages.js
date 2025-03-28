@@ -1,17 +1,18 @@
+import mysql from "mysql2/promise"
+
 export default async function handler(req, res) {
-  // ✅ CORS HEADERS
+  // ✅ Fix CORS for all methods
   res.setHeader("Access-Control-Allow-Origin", "*")
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, DELETE, OPTIONS")
   res.setHeader("Access-Control-Allow-Headers", "Content-Type")
-  res.setHeader("Access-Control-Max-Age", "86400")
 
-  // ✅ Respond to preflight OPTIONS
+  // ✅ Respond to preflight
   if (req.method === "OPTIONS") {
     return res.status(204).end()
   }
 
-  // ✅ Grab customer_id from req.query (Next.js dynamic route)
   const { customer_id } = req.query
+
   if (!customer_id) {
     return res.status(400).json({ success: false, error: "Missing customer_id" })
   }
@@ -24,13 +25,13 @@ export default async function handler(req, res) {
         password: process.env.DBPASS,
         database: process.env.DBNAME,
         ssl: process.env.DB_SSL_CA ? { ca: Buffer.from(process.env.DB_SSL_CA, "base64") } : false,
-        connectTimeout: 5000,
       })
 
       const [result] = await connection.execute(
         "DELETE FROM customer_messages WHERE customer_id = ?",
         [customer_id]
       )
+
       await connection.end()
 
       return res.status(200).json({
