@@ -1,17 +1,17 @@
 import mysql from 'mysql2/promise';
 
 export default async function handler(req, res) {
-  // ✅ Proper CORS headers
+  // ✅ CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, PUT, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
-  res.setHeader('Access-Control-Max-Age', '86400'); // Cache preflight for 1 day
+  res.setHeader('Access-Control-Max-Age', '86400');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  // 🔹 GET: Fetch ALL messages for a customer, optionally filter by read/unread
+  // 🔹 GET: Fetch messages for a customer (filter by read/unread)
   if (req.method === 'GET') {
     const { id, is_read } = req.query;
 
@@ -30,7 +30,7 @@ export default async function handler(req, res) {
       });
 
       let query = `SELECT * FROM customer_messages WHERE packages_customers_id = ?`;
-      let params = [id];
+      const params = [id];
 
       if (is_read !== undefined) {
         query += ` AND message_read = ?`;
@@ -47,15 +47,14 @@ export default async function handler(req, res) {
     }
   }
 
-  // 🔹 PUT: Mark message as read
+  // 🔹 PUT: Mark a specific message as read
   if (req.method === 'PUT') {
     let body = req.body;
 
-    // Handle body parsing edge case (when deployed)
     if (typeof body === 'string') {
       try {
         body = JSON.parse(body);
-      } catch (parseErr) {
+      } catch {
         return res.status(400).json({ success: false, error: 'Invalid JSON body.' });
       }
     }
@@ -63,10 +62,7 @@ export default async function handler(req, res) {
     const { customer_id, tracking_number } = body;
 
     if (!customer_id || !tracking_number) {
-      return res.status(400).json({ 
-        success: false, 
-        error: 'Missing required fields: customer_id and tracking_number.' 
-      });
+      return res.status(400).json({ success: false, error: 'Missing required fields: customer_id and tracking_number.' });
     }
 
     try {
@@ -80,9 +76,7 @@ export default async function handler(req, res) {
       });
 
       const [result] = await connection.execute(
-        `UPDATE customer_messages 
-         SET message_read = 1 
-         WHERE packages_tracking_number = ? AND packages_customers_id = ?`,
+        `UPDATE customer_messages SET message_read = 1 WHERE packages_tracking_number = ? AND packages_customers_id = ?`,
         [tracking_number, customer_id]
       );
 
@@ -99,6 +93,6 @@ export default async function handler(req, res) {
     }
   }
 
-  // ❌ Other methods
+  // ❌ Unsupported method
   return res.status(405).json({ success: false, error: 'Method Not Allowed. Use GET or PUT.' });
 }
