@@ -1,16 +1,25 @@
 import mysql from "mysql2/promise"
 
 export default async function handler(req, res) {
-  // Headers para CORS - Configuración mejorada
-  res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
-  res.setHeader("Access-Control-Max-Age", "86400") // 24 horas
-  res.setHeader("x-content-type-options", "nosniff")
+  // Enhanced CORS headers to allow requests from localhost
+  const allowedOrigins = ['https://your-production-domain.com', 'http://localhost:3000'];
+  const origin = req.headers.origin;
+  
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, DELETE");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Access-Control-Max-Age", "86400"); // 24 hours
+  res.setHeader("x-content-type-options", "nosniff");
 
-  // Manejar la solicitud preflight OPTIONS
+  // Handle preflight OPTIONS request
   if (req.method === "OPTIONS") {
-    return res.status(200).end()
+    return res.status(200).end();
   }
 
   try {
@@ -34,7 +43,7 @@ export default async function handler(req, res) {
          FROM customer_messages cm
          LEFT JOIN packages p ON cm.packages_tracking_number = p.tracking_number
          WHERE cm.packages_customers_id = ?
-         AND cm.message_read = 0`,
+         AND cm.message_read = 0`, 
         [customer_id],
       )
 
@@ -84,4 +93,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: error.message })
   }
 }
-
