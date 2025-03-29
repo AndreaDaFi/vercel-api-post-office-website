@@ -22,35 +22,21 @@ export default async function handler(req, res) {
     })
 
     if (req.method === "GET") {
-      const { customer_id, status } = req.query
+      const { customer_id } = req.query
 
       if (!customer_id) {
         return res.status(400).json({ success: false, error: "customer_id is required" })
       }
 
-      // Consulta base
-      let query = `
-        SELECT cm.*, p.tracking_number, p.status, p.description,
-               eu.previous_status, eu.updated_status, eu.status_update_datetime
-        FROM customer_messages cm
-        LEFT JOIN packages p ON cm.packages_tracking_number = p.tracking_number
-        LEFT JOIN employees_updates_to_packages eu ON p.tracking_number = eu.tracking_number
-        WHERE cm.packages_customers_id = ?
-        AND cm.message_read = 0
-      `
-
-      const queryParams = [customer_id]
-
-      // Filtrar por estado si se proporciona
-      if (status) {
-        query += " AND p.status = ?"
-        queryParams.push(status)
-      }
-
-      // Ordenar por fecha de actualización, más reciente primero
-      query += " ORDER BY eu.status_update_datetime DESC"
-
-      const [messages] = await connection.execute(query, queryParams)
+      // Seleccionar SOLO mensajes no leídos (message_read = 0)
+      const [messages] = await connection.execute(
+        `SELECT cm.*, p.tracking_number, p.status, p.description
+         FROM customer_messages cm
+         LEFT JOIN packages p ON cm.packages_tracking_number = p.tracking_number
+         WHERE cm.packages_customers_id = ?
+         AND cm.message_read = 0`,
+        [customer_id],
+      )
 
       // Procesar los mensajes para agregar texto descriptivo
       const processedMessages = messages.map((msg) => {
@@ -59,18 +45,10 @@ export default async function handler(req, res) {
           return msg
         }
 
-        // Para paquetes entregados
-        if (msg.status === "Delivered") {
-          return {
-            ...msg,
-            message: `Tu paquete con número de seguimiento ${msg.tracking_number} ha sido entregado.`,
-          }
-        }
-
-        // Para otros estados
+        // Para paquetes entregados, crear un mensaje descriptivo
         return {
           ...msg,
-          message: `Tu paquete con número de seguimiento ${msg.tracking_number} ha cambiado de estado: ${msg.previous_status || "Estado anterior"} → ${msg.updated_status || msg.status}`,
+          message: `Tu paquete con número de seguimiento ${msg.tracking_number} ha sido entregado.`,
         }
       })
 
