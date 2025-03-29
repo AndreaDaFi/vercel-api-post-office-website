@@ -1,24 +1,14 @@
-// /api/CustomerMessages.js
 import mysql from 'mysql2/promise';
 
 export default async function handler(req, res) {
+  // Headers para CORS y seguridad
   res.setHeader('x-content-type-options', 'nosniff');
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return res.status(200).end();
-  }
-
-  if (req.method !== 'GET') {
-    return res.status(405).json({ success: false, error: 'Method Not Allowed. Use GET.' });
-  }
-
-  const { customer_id } = req.query;
-
-  if (!customer_id) {
-    return res.status(400).json({ success: false, error: 'Missing customer ID.' });
+    return res.status(200).end(); // CORS preflight
   }
 
   try {
@@ -27,19 +17,42 @@ export default async function handler(req, res) {
       user: process.env.DBUSER,
       password: process.env.DBPASS,
       database: process.env.DBNAME,
-      ssl: process.env.DB_SSL_CA ? { ca: Buffer.from(process.env.DB_SSL_CA, 'base64') } : false,
     });
 
-    const [messages] = await connection.execute(
-      `SELECT * FROM customer_messages WHERE packages_customers_id = ? AND message_read = 0`,
-      [customer_id]
-    );
+    if (req.method === 'GET') {
+      const { customer_id } = req.query;
 
-    await connection.end();
+      if (!customer_id) {
+        return res.status(400).json({ success: false, error: 'customer_id is required' });
+      }
 
-    return res.status(200).json({ success: true, messages });
+      // 1. Seleccionar mensajes no leídos
+      const [messages] = await connection.execute(
+        `SELECT * FROM customer_messages
+         WHERE packages_customers_id = ?
+         AND message IS NOT NULL
+         AND message_read = FALSE`,
+        [customer_id]
+      );
+
+      // 2. Marcarlos como leídos y borrar el mensaje
+      await connection.execute(
+        `UPDATE customer_messages
+         SET message_read = TRUE,
+             message = NULL
+         WHERE packages_customers_id = ?
+         AND message IS NOT NULL
+         AND message_read = FALSE`,
+        [customer_id]
+      );
+
+      await connection.end();
+      return res.status(200).json({ success: true, messages });
+    }
+
+    return res.status(405).json({ success: false, error: 'Method Not Allowed' });
   } catch (error) {
-    console.error("❌ DB Error:", error.message);
-    return res.status(500).json({ success: false, error: "Internal Server Error" });
+    console.error('API error:', error);
+    return res.status(500).json({ success: false, error: error.message });
   }
 }
