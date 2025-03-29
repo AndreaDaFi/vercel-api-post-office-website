@@ -1,14 +1,16 @@
 import mysql from "mysql2/promise"
 
 export default async function handler(req, res) {
-  // Headers para CORS y seguridad
+  // Headers para CORS - Configuración mejorada
   res.setHeader("Access-Control-Allow-Origin", "*")
-  res.setHeader("Access-Control-Allow-Methods", "GET, OPTIONS")
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type")
+  res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization")
+  res.setHeader("Access-Control-Max-Age", "86400") // 24 horas
   res.setHeader("x-content-type-options", "nosniff")
 
+  // Manejar la solicitud preflight OPTIONS
   if (req.method === "OPTIONS") {
-    return res.status(200).end() // CORS preflight
+    return res.status(200).end()
   }
 
   try {
@@ -20,30 +22,44 @@ export default async function handler(req, res) {
     })
 
     if (req.method === "GET") {
-      const { customer_id } = req.query
+      const { customer_id, status } = req.query
 
       if (!customer_id) {
         return res.status(400).json({ success: false, error: "customer_id is required" })
       }
 
-      // 1. Seleccionar SOLO mensajes no leídos (message_read = 0)
-      const [messages] = await connection.execute(
-        `SELECT cm.*, p.tracking_number, p.status, p.description
-         FROM customer_messages cm
-         LEFT JOIN packages p ON cm.packages_tracking_number = p.tracking_number
-         WHERE cm.packages_customers_id = ?
-         AND cm.message_read = 0`, // Solo mensajes con message_read = 0
-        [customer_id],
-      )
+      // Consulta base
+      let query = `
+        SELECT cm.*, p.tracking_number, p.status, p.description,
+               eu.previous_status, eu.updated_status, eu.status_update_datetime
+        FROM customer_messages cm
+        LEFT JOIN packages p ON cm.packages_tracking_number = p.tracking_number
+        LEFT JOIN employees_updates_to_packages eu ON p.tracking_number = eu.tracking_number
+        WHERE cm.packages_customers_id = ?
+        AND cm.message_read = 0
+      `
 
-      // Procesar los mensajes para agregar texto descriptivo si no tienen mensaje
+      const queryParams = [customer_id]
+
+      // Filtrar por estado si se proporciona
+      if (status) {
+        query += " AND p.status = ?"
+        queryParams.push(status)
+      }
+
+      // Ordenar por fecha de actualización, más reciente primero
+      query += " ORDER BY eu.status_update_datetime DESC"
+
+      const [messages] = await connection.execute(query, queryParams)
+
+      // Procesar los mensajes para agregar texto descriptivo
       const processedMessages = messages.map((msg) => {
         // Si el mensaje ya tiene contenido, lo dejamos como está
         if (msg.message) {
           return msg
         }
 
-        // Si no tiene mensaje pero es un paquete entregado (del trigger), creamos un mensaje
+        // Para paquetes entregados
         if (msg.status === "Delivered") {
           return {
             ...msg,
@@ -51,14 +67,14 @@ export default async function handler(req, res) {
           }
         }
 
-        // Para otros casos sin mensaje específico
+        // Para otros estados
         return {
           ...msg,
-          message: `Actualización de estado para tu paquete: ${msg.status || "Estado actualizado"}`,
+          message: `Tu paquete con número de seguimiento ${msg.tracking_number} ha cambiado de estado: ${msg.previous_status || "Estado anterior"} → ${msg.updated_status || msg.status}`,
         }
       })
 
-      // 2. Marcar los mensajes como leídos (message_read = 1)
+      // Marcar los mensajes como leídos (message_read = 1)
       if (messages.length > 0) {
         // Extraer los IDs de los mensajes para actualizarlos
         const messageIds = messages.map((msg) => msg.id).join(",")
