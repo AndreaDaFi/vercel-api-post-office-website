@@ -13,16 +13,17 @@ export default async function handler(req, res) {
 
   try {
     const db = await mysql.createConnection({
-      host: "localhost",      // 🔁 change for production
+      host: "localhost", // cambia esto si estás en producción
       user: "your_user",
-      password: "your_pass",
-      database: "your_db",
+      password: "your_password",
+      database: "your_database",
     })
 
+    // Solo mensajes no leídos (opc)
     const [messages] = await db.execute(
-      `SELECT packages_tracking_number, message_read 
-       FROM customer_messages 
-       WHERE packages_customers_id = ? AND message_read = 0`,
+      `SELECT packages_tracking_number, message_read
+       FROM customer_messages
+       WHERE packages_customers_id = ?`,
       [customerId]
     )
 
@@ -30,7 +31,7 @@ export default async function handler(req, res) {
 
     return res.status(200).json({ success: true, messages })
   } catch (err) {
-    console.error("DB error:", err)
+    console.error("❌ DB Error:", err)
     return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }

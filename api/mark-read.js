@@ -13,10 +13,10 @@ export default async function handler(req, res) {
 
   try {
     const db = await mysql.createConnection({
-      host: "localhost", // ⚠️ Replace with your actual DB host
+      host: "localhost", // cambia esto si estás en producción
       user: "your_user",
-      password: "your_pass",
-      database: "your_db",
+      password: "your_password",
+      database: "your_database",
     })
 
     const [result] = await db.execute(
@@ -28,12 +28,9 @@ export default async function handler(req, res) {
 
     await db.end()
 
-    return res.status(200).json({
-      success: true,
-      updated: result.affectedRows,
-    })
+    return res.status(200).json({ success: true, updated: result.affectedRows })
   } catch (err) {
-    console.error("DB error in mark-read:", err)
+    console.error("❌ DB Error:", err)
     return res.status(500).json({ success: false, message: "Internal server error" })
   }
 }
