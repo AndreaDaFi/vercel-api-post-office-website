@@ -28,6 +28,7 @@ export default async function handler(req, res) {
       ssl: process.env.DB_SSL_CA ? { ca: Buffer.from(process.env.DB_SSL_CA, 'base64') } : false,
       connectTimeout: 5000,
     })
+    console.log("DG CONNECTED :)");
 
     const [packages] = await connection.execute(
       `SELECT tracking_number, status, weight, receiver_name, type
