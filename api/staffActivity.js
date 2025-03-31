@@ -11,8 +11,11 @@ export default async function handler(req, res) {
   }
 
   if (req.method === 'POST') {
-    // Existing functionality for staff activity
     const { po_id, startDate, endDate, statusUpdate, employeeRole, specificEmployee } = req.body;
+    
+    if (!po_id) {
+      return res.status(400).json({ success: false, error: 'Valid po_id is required' });
+    }
 
     try {
       console.log("⏳ Connecting to database...");
@@ -60,25 +63,29 @@ export default async function handler(req, res) {
           (? = '' OR e.first_name = ?)
       `;
 
-      const params = [
-        po_id || 0,
-        startDate || '1900-01-01',
-        endDate || '2100-12-31',
-        statusUpdate || '', statusUpdate || '',
-        employeeRole || '', employeeRole || '',
-        specificEmployee || '', specificEmployee || ''
-      ];
-
-      const [rows] = await connection.execute(query, params);
-
-      // Total rows query
       const totalQuery = `
-        SELECT COUNT(*) AS totalRows
-        FROM employees_updates_to_packages eu
-        JOIN packages p ON eu.tracking_number = p.tracking_number
-        WHERE p.po_id = ?
-      `;
-      const [totalRowsResult] = await connection.execute(totalQuery, [po_id || 0]);
+  SELECT COUNT(*) AS totalRows
+  FROM employees_updates_to_packages eu
+  JOIN employees e ON eu.employees_id = e.employees_id
+  JOIN packages p ON eu.tracking_number = p.tracking_number
+  WHERE p.po_id = ?
+  AND eu.status_update_datetime >= ? 
+  AND eu.status_update_datetime <= ?
+  AND (? = '' OR eu.updated_status = ?) 
+  AND (? = '' OR e.role = ?) 
+  AND (? = '' OR e.first_name = ?)
+`;
+
+const totalParams = [
+  po_id || 0,
+  startDate ? new Date(startDate).toISOString().slice(0, 19).replace('T', ' ') : '1900-01-01 00:00:00',
+  endDate ? new Date(endDate).toISOString().slice(0, 19).replace('T', ' ') : '2100-12-31 23:59:59',
+  statusUpdate || '', statusUpdate || '',
+  employeeRole || '', employeeRole || '',
+  specificEmployee || '', specificEmployee || ''
+];
+
+const [totalRowsResult] = await connection.execute(totalQuery, totalParams);
 
       await connection.end();
       console.log("✅ Query executed successfully!", rows);
@@ -91,8 +98,11 @@ export default async function handler(req, res) {
     }
   } else if (req.method === 'GET') {
     // New functionality to fetch employees based on po_id
-    const { po_id } = req.query;
-
+    const po_id = req.query.po_id ? parseInt(req.query.po_id, 10) : null;
+    
+    if (!po_id) {
+      return res.status(400).json({ success: false, error: 'Valid po_id is required' });
+    }
     try {
       console.log("⏳ Fetching employees...");
       const connection = await mysql.createConnection({
@@ -103,6 +113,7 @@ export default async function handler(req, res) {
         ssl: process.env.DB_SSL_CA 
           ? { ca: Buffer.from(process.env.DB_SSL_CA, 'base64') }
           : false,
+          connectTimeout: 5000,
       });
 
       const query = `
