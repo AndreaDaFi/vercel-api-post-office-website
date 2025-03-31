@@ -33,35 +33,34 @@ export default async function handler(req, res) {
       console.log("✅ Database connected!");
 
       const query = `
-        SELECT 
-          eu.my_row_id,
-          e.first_name,
-          e.role,
-          eu.status_update_datetime,
-          eu.previoust_status,
-          eu.updated_status,
-          p.type,
-          CONCAT(a1.street, ', ', a1.city_name) AS originAddress,
-          CONCAT(a2.street, ', ', a2.city_name) AS destinationAddress
-        FROM 
-          employees_updates_to_packages eu
-        JOIN 
-          employees e ON eu.employees_id = e.employees_id
-        JOIN 
-          packages p ON eu.tracking_number = p.tracking_number
-        JOIN 
-          address a1 ON p.origin_address_id = a1.address_id
-        JOIN 
-          address a2 ON p.destination_address_id = a2.address_id
-        WHERE 
-          p.po_id = ? AND eu.status_update_datetime >= ? AND eu.status_update_datetime <= ?
-        AND 
-          (? = '' OR eu.updated_status = ?) 
-        AND 
-          (? = '' OR e.role = ?) 
-        AND 
-          (? = '' OR e.first_name = ?)
-      `;
+  SELECT 
+    eu.my_row_id,
+    e.first_name,
+    e.role,
+    eu.status_update_datetime,
+    eu.previoust_status,
+    eu.updated_status,
+    p.type,
+    CONCAT(a1.street, ', ', a1.city_name) AS originAddress,
+    CONCAT(a2.street, ', ', a2.city_name) AS destinationAddress
+  FROM 
+    employees_updates_to_packages eu
+  JOIN 
+    employees e ON eu.employees_id = e.employees_id
+  JOIN 
+    packages p ON eu.tracking_number = p.tracking_number
+  JOIN 
+    address a1 ON p.origin_address_id = a1.address_id
+  JOIN 
+    address a2 ON p.destination_address_id = a2.address_id
+  WHERE 
+    p.po_id = ? 
+    AND eu.status_update_datetime >= ? 
+    AND eu.status_update_datetime <= ?
+    AND (? = '' OR eu.updated_status = ?) 
+    AND (? = '' OR e.role = ?) 
+    AND (? = '' OR e.first_name = ?)
+`;
 
       const totalQuery = `
   SELECT COUNT(*) AS totalRows
@@ -76,7 +75,7 @@ export default async function handler(req, res) {
   AND (? = '' OR e.first_name = ?)
 `;
 
-const totalParams = [
+const params = [
   po_id || 0,
   startDate ? new Date(startDate).toISOString().slice(0, 19).replace('T', ' ') : '1900-01-01 00:00:00',
   endDate ? new Date(endDate).toISOString().slice(0, 19).replace('T', ' ') : '2100-12-31 23:59:59',
@@ -84,8 +83,9 @@ const totalParams = [
   employeeRole || '', employeeRole || '',
   specificEmployee || '', specificEmployee || ''
 ];
+
 const [rows] = await connection.execute(query, params);
-const [totalRowsResult] = await connection.execute(totalQuery, totalParams);
+const [totalRowsResult] = await connection.execute(totalQuery, params);
 
       await connection.end();
       console.log("✅ Query executed successfully!", rows);
