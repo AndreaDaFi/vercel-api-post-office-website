@@ -84,7 +84,7 @@ const totalParams = [
   employeeRole || '', employeeRole || '',
   specificEmployee || '', specificEmployee || ''
 ];
-
+const [rows] = await connection.execute(query, params);
 const [totalRowsResult] = await connection.execute(totalQuery, totalParams);
 
       await connection.end();
