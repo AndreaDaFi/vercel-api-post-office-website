@@ -2,7 +2,7 @@ import mysql from "mysql2/promise";
 
 export default async function handler(req, res) {
   // ✅ CORS Headers
-  res.setHeader("Access-Control-Allow-Origin", "https://apipost.vercel.app"); // or "*" in dev
+  res.setHeader("Access-Control-Allow-Origin", "*"); // or "*" in dev
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 

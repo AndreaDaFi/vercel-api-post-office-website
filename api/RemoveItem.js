@@ -2,15 +2,19 @@ import mysql from 'mysql2/promise';
 
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
     return res.status(204).end();
   }
 
-  if (req.method === 'GET') {
-    const { po_id } = req.query;
+  if (req.method === 'POST') {
+    const { selectedItem } = req.body; // Expecting { selectedItem: value }
+
+    if (!selectedItem) {
+      return res.status(400).json({ success: false, error: "Missing selectedItem" });
+    }
 
     try {
       console.log("⏳ Connecting to database...");
@@ -27,16 +31,17 @@ export default async function handler(req, res) {
 
       console.log("✅ Database connected!");
 
-      // ✅ Fetch employees based on manager's ID (po_id)
+      // ✅ Update the stock of the selected item
       const [rows] = await connection.execute(
-        `SELECT item_name, item_price, stock, item_category, item_id FROM items_for_sale WHERE po_id=? AND stock != -1;`, [po_id]
+        `UPDATE items_for_sale
+        SET stock = -1
+        WHERE item_id = ?;`, [selectedItem]
       );
 
       await connection.end();
       console.log("✅ Query executed successfully!", rows);
 
       res.status(200).json({ success: true, data: rows });
-
     } catch (error) {
       console.error("❌ API Error:", error.message);
       res.status(500).json({ success: false, error: error.message });
