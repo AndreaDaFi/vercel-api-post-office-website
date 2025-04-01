@@ -68,7 +68,7 @@ JOIN
 WHERE 
     h.po_id = ?
 GROUP BY 
-    e.employees_id, e.first_name, e.role, h.datee
+    e.employees_id, e.first_name, e.role, h.date
       `;
 
       // Query for employees list
