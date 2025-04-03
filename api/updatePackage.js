@@ -72,15 +72,6 @@ export default async function handler(req, res) {
 
       console.log(`Package found with post office ID: ${packagePostOfficeId}, current status: ${previousStatus}, customer ID: ${customersId}`);
 
-      // Ensure the employee is authorized to update the package
-      if (employeePostOfficeId !== packagePostOfficeId) {
-        await connection.end();
-        return res.status(403).json({
-          success: false,
-          error: 'Employee is not authorized to update this package.',
-        });
-      }
-
       // Start transaction
       await connection.beginTransaction();
 
