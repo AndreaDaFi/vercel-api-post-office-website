@@ -16,7 +16,6 @@ export default async function handler(req, res) {
 
     const { date, hours, employees_id, po_id } = req.body;
 
-    // Validate date format
     const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
     if (!date || !dateRegex.test(date)) {
       return res.status(400).json({ success: false, error: "⚠ Invalid date format. Use YYYY-MM-DD." });
@@ -37,7 +36,7 @@ export default async function handler(req, res) {
 
     console.log("✅ Database connected!");
 
-    // Validate employees_id
+    // Validaciones
     const [employeeExists] = await connection.execute(
       "SELECT COUNT(*) AS count FROM employees WHERE employees_id = ?",
       [employees_id]
@@ -47,7 +46,6 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "⚠ Invalid employee ID." });
     }
 
-    // Validate po_id
     const [postOfficeExists] = await connection.execute(
       "SELECT COUNT(*) AS count FROM post_office WHERE po_id = ?",
       [po_id]
@@ -57,18 +55,30 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "⚠ Invalid post office ID." });
     }
 
-    // Insert data into the hours table
-    const query = `
-      INSERT INTO hours (date, hours, employees_id, po_id)
-      VALUES (?, ?, ?, ?)
-    `;
-    
-    await connection.execute(query, [date, hours, employees_id, po_id]);
-    
+    // Verificar si ya existe un registro ese día
+    const [existing] = await connection.execute(
+      "SELECT COUNT(*) AS count FROM hours WHERE date = ? AND employees_id = ? AND po_id = ?",
+      [date, employees_id, po_id]
+    );
+
+    if (existing[0].count > 0) {
+      // Ya existe: actualizar las horas
+      await connection.execute(
+        "UPDATE hours SET hours = ? WHERE date = ? AND employees_id = ? AND po_id = ?",
+        [hours, date, employees_id, po_id]
+      );
+      console.log("📝 Hours updated for existing entry.");
+    } else {
+      // No existe: insertar nuevo registro
+      await connection.execute(
+        "INSERT INTO hours (date, hours, employees_id, po_id) VALUES (?, ?, ?, ?)",
+        [date, hours, employees_id, po_id]
+      );
+      console.log("✅ Hours inserted for new entry.");
+    }
+
     await connection.end();
-    
-    console.log("✅ Hours recorded successfully!");
-    
+
     return res.status(200).json({ success: true });
 
   } catch (error) {
