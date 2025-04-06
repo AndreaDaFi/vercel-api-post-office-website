@@ -1,17 +1,20 @@
 import mysql from 'mysql2/promise';
 
 export default async function handler(req, res) {
-  // ✅ Set CORS headers to allow frontend requests
   res.setHeader('Access-Control-Allow-Origin', '*');  
-  res.setHeader('Access-Control-Allow-Methods', 'GET, OPTIONS');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
 
   if (req.method === 'OPTIONS') {
-    return res.status(204).end(); // ✅ Preflight response
+    return res.status(204).end();
   }
 
-  if (req.method === 'GET') {
-    const { mngr_id } = req.query;
+  if (req.method === 'POST') {
+    const { selectedItem } = req.body; // Expecting { selectedItem: value }
+
+    if (!selectedItem) {
+      return res.status(400).json({ success: false, error: "Missing selectedItem" });
+    }
 
     try {
       console.log("⏳ Connecting to database...");
@@ -28,23 +31,17 @@ export default async function handler(req, res) {
 
       console.log("✅ Database connected!");
 
-      // ✅ Fetch employees based on manager's ID (po_id)
+      // ✅ Update the stock of the selected item
       const [rows] = await connection.execute(
-        `SELECT e.employees_id AS id, 
-                CONCAT(e.first_name, ' ', e.last_name) AS name, 
-                e.email, 
-                e.phone, 
-                e.role
-         FROM employees AS e
-         WHERE e.mngr_id = ?
-         AND is_active=1`, [mngr_id] // Use the manager's ID to filter employees
+        `UPDATE employees
+        SET is_active = 0
+        WHERE employees_id = ?;`, [selectedItem]
       );
 
       await connection.end();
       console.log("✅ Query executed successfully!", rows);
 
       res.status(200).json({ success: true, data: rows });
-
     } catch (error) {
       console.error("❌ API Error:", error.message);
       res.status(500).json({ success: false, error: error.message });
