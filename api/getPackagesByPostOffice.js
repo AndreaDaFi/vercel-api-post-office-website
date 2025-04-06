@@ -32,14 +32,33 @@ export default async function handler(req, res) {
     console.log("DG CONNECTED :)");
 
     const [packages] = await connection.execute(
-      `SELECT tracking_number, status, weight, receiver_name, type,
-CONCAT(ao.street, ao.apt, ', ', ao.city_name, ' ', ao.state_id) AS 'prigin_address', ao.state_id AS 'origin_state',
-CONCAT(ad.street, ad.apt, ', ', ad.city_name, ' ', ad.state_id) AS 'destination_address', ad.state_id AS 'destination_state',
-fast_delivery
-       FROM packages AS p
-       JOIN address AS ad ON ad.address_id=p.destination_address_id
-       JOIN address AS ao ON ao.address_id=p.origin_address_id
-       WHERE po_id = ?;`,
+      `SELECT 
+    p.tracking_number, 
+    p.status, 
+    p.weight, 
+    p.receiver_name, 
+    p.type,
+    CONCAT(ao.street, ao.apt, ', ', ao.city_name, ' ', ao.state_id) AS 'origin_address', 
+    ao.state_id AS 'origin_state',
+    CONCAT(ad.street, ad.apt, ', ', ad.city_name, ' ', ad.state_id) AS 'destination_address', 
+    ad.state_id AS 'destination_state',
+    p.fast_delivery,
+    -- Subquery for items bought and amount bought if type is NULL
+    CASE
+        WHEN p.type IS NULL THEN (
+            SELECT GROUP_CONCAT(CONCAT(i.item_name, ': ', ip.item_amount_purchased) SEPARATOR ', ')
+            FROM item_purchased ip
+            JOIN items_for_sale i ON i.item_id = ip.item_id
+            JOIN transactions t ON t.transactions_id = ip.transactions_id
+            WHERE t.packages_tracking_number = p.tracking_number
+        )
+        ELSE NULL
+    END AS 'store_order_items'
+FROM packages AS p
+JOIN address AS ad ON ad.address_id = p.destination_address_id
+JOIN address AS ao ON ao.address_id = p.origin_address_id
+WHERE p.po_id = ?
+`,
       [po_id]
     )
 
