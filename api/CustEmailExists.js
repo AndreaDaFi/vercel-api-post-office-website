@@ -34,7 +34,7 @@ export default async function handler(req, res) {
 
     // Fetch user by email
     const [rows] = await connection.execute(
-      "SELECT * FROM customers WHERE email = ?",
+      "SELECT * FROM customers WHERE email = ? AND is_active = 1",
       [email]
     );
 
