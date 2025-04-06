@@ -33,8 +33,8 @@ export default async function handler(req, res) {
 
     const [packages] = await connection.execute(
       `SELECT tracking_number, status, weight, receiver_name, type,
-CONCAT(ao.street, ao.apt, ', ', ao.state_id, ao.city_name) AS 'prigin_address', ao.state_id AS 'origin_state',
-CONCAT(ad.street, ad.apt, ', ', ad.state_id, ad.city_name) AS 'destination_address', ad.state_id AS 'destination_state'
+CONCAT(ao.street, ao.apt, ', ', ao.city_name, ' ', ao.state_id) AS 'prigin_address', ao.state_id AS 'origin_state',
+CONCAT(ad.street, ad.apt, ', ', ad.city_name, ' ', ad.state_id) AS 'destination_address', ad.state_id AS 'destination_state'
        FROM packages AS p
        JOIN address AS ad ON ad.address_id=p.destination_address_id
        JOIN address AS ao ON ao.address_id=p.origin_address_id
