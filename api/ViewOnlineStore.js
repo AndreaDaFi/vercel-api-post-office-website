@@ -29,7 +29,7 @@ export default async function handler(req, res) {
       console.log("✅ Database connected!");
 
       const [rows] = await connection.execute(
-        `SELECT p.tracking_number, p.status, ifs.item_category, t.transaction_date, ifs.item_name, item_price, ip.item_amount_purchased, ifs.item_id,
+        `SELECT p.tracking_number, p.status, ifs.stock, ifs.item_category, c.email, t.transaction_date, ifs.item_name, item_price, ip.item_amount_purchased, ifs.item_id,
        (SELECT status_update_datetime 
         FROM employees_updates_to_packages eutp
         WHERE eutp.tracking_number = p.tracking_number
@@ -46,6 +46,7 @@ JOIN item_purchased AS ip ON ip.transactions_id = t.transactions_id
 JOIN items_for_sale AS ifs ON ifs.item_id=ip.item_id
 JOIN post_office AS po ON ifs.po_id=po.po_id
 JOIN address AS pa ON pa.address_id = po.po_address_id
+JOIN customers AS c ON c.customers_id=p.customers_id
 WHERE p.po_id = ?
   AND p.type IS NULL
   AND p.tracking_number = t.packages_tracking_number;`, [po_id]
