@@ -17,26 +17,27 @@ export default async function handler(req, res) {
   // Handle POST requests
   if (req.method === "POST") {
     const {
-        firstName,
-        lastName,
-        birthdate,
-        salary,
-        hire_date, // Set current date as default
-        ssn,
-        role,
-        email,
-        phone,
-        street,
-        streetLine2,
-        aptNumber,
-        city,
-        state,
-        zipCode,
-        password,
-        securityQuestion,
-        securityAnswer,
-        mngr_id,
-        po_id
+      firstName,
+      lastName,
+      birthdate,
+      salary,
+      hire_date,
+      ssn,
+      role,
+      postOfficeID,
+      street,
+      streetLine2,
+      aptNumber,
+      city,
+      state,
+      zipCode,
+      email,
+      phone,
+      password,
+      securityCode,
+      securityQuestion,
+      securityAnswer,
+      mngr_id,
     } = req.body;
 
     try {
@@ -81,10 +82,10 @@ export default async function handler(req, res) {
       // Insert employee
       const [custSuccessorNot] = await connection.execute(`
         INSERT INTO employees (first_name, last_name, birthdate, salary, hire_date, ssn, role, email, phone, po_id,
-        password, security_question, security_answer, mngr_id, employees_address_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        password, security_question, security_answer, mngr_id, employees_address_id, security_code)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `, [firstName,lastName,birthdate,salary,hire_date,ssn,role,email,phone,po_id,
-        password,securityQuestion,securityAnswer,mngr_id, newAddID]);
+        password,securityQuestion,securityAnswer,mngr_id, newAddID, securityCode]);
 
       console.log("Customer insert result:", custSuccessorNot);
 
