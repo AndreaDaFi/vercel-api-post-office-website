@@ -35,7 +35,20 @@ export default async function handler(req, res) {
 
     // ✅ Select only existing columns
     const [packages] = await connection.execute(
-      "SELECT tracking_number, status, weight, receiver_name, type FROM packages WHERE customers_id = ?",
+      `SELECT p.tracking_number, p.status, p.weight, p.receiver_name, p.type,
+	CASE
+        WHEN p.type IS NULL THEN (
+            SELECT GROUP_CONCAT(CONCAT(i.item_name, ': ', ip.item_amount_purchased) SEPARATOR ', ')
+            FROM item_purchased ip
+            JOIN items_for_sale i ON i.item_id = ip.item_id
+            JOIN transactions t ON t.transactions_id = ip.transactions_id
+            WHERE t.packages_tracking_number = p.tracking_number
+            GROUP BY t.packages_tracking_number
+        )
+        ELSE NULL
+    END AS 'store_order_items'
+FROM packages AS p
+WHERE customers_id = ?;`,
       [customer_id]
     );
 
