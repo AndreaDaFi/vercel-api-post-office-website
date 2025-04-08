@@ -46,8 +46,13 @@ export default async function handler(req, res) {
             GROUP BY t.packages_tracking_number
         )
         ELSE NULL
-    END AS 'store_order_items'
+    END AS 'store_order_items',
+    CASE
+        WHEN p.fast_delivery = 1 THEN DATE_ADD(t.transaction_date, INTERVAL 1 DAY)
+        ELSE DATE_ADD(t.transaction_date, INTERVAL 10 DAY)
+    END AS 'estimated_delivery'
 FROM packages AS p
+JOIN transactions AS t ON t.packages_tracking_number = p.tracking_number
 WHERE customers_id = ?;`,
       [customer_id]
     );

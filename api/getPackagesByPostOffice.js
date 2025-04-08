@@ -53,10 +53,15 @@ export default async function handler(req, res) {
             WHERE t.packages_tracking_number = p.tracking_number
         )
         ELSE NULL
-    END AS 'store_order_items'
+    END AS 'store_order_items',
+    CASE
+        WHEN p.fast_delivery = 1 THEN DATE_ADD(t.transaction_date, INTERVAL 1 DAY)
+        ELSE DATE_ADD(t.transaction_date, INTERVAL 10 DAY)
+    END AS 'estimated_delivery'
 FROM packages AS p
 JOIN address AS ad ON ad.address_id = p.destination_address_id
 JOIN address AS ao ON ao.address_id = p.origin_address_id
+JOIN transactions AS t ON t.packages_tracking_number = p.tracking_number
 WHERE p.po_id = ?
 `,
       [po_id]
